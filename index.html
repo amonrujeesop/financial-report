@@ -469,4 +469,220 @@
                 <tr><th>รายการงบประมาณ</th><th>จัดสรร</th><th>ใช้จริง</th><th>%</th></tr>
               </thead>
               <tbody id="tbl-sec3">
-                <tr><td contenteditable
+                <tr><td contenteditable="true">งบบุคลากร</td><td contenteditable="true">1,584.34</td><td contenteditable="true">1,438.44</td><td><span class="badge-percent" contenteditable="true">55.0%</span></td></tr>
+                <tr><td contenteditable="true">งบดำเนินงาน</td><td contenteditable="true">700.00</td><td contenteditable="true">450.20</td><td><span class="badge-percent" contenteditable="true">64.3%</span></td></tr>
+                <tr><td contenteditable="true">งบลงทุน/อุดหนุน</td><td contenteditable="true">300.00</td><td contenteditable="true">180.00</td><td><span class="badge-percent" contenteditable="true">60.0%</span></td></tr>
+              </tbody>
+            </table>
+            <div contenteditable="true" style="margin-top:3px; font-size:7.2pt; color:#64748b;">
+              * การเบิกจ่ายเป็นไปตามมาตรการเร่งรัดงบประมาณ
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 4 -->
+        <div class="section-card">
+          <div class="section-header">
+            <span class="section-number">4</span>
+            <span class="section-title">งบรายได้: ประมาณการ vs รายรับจริง</span>
+          </div>
+          <div class="section-body">
+            <div class="chart-wrapper"><canvas id="chart4"></canvas></div>
+            <div contenteditable="true" style="font-size:7.2pt; margin-top:2px;">
+              • จัดเก็บจริงรวม 3,935.682 ล้านบาท คิดเป็น 86.40%
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 5 -->
+        <div class="section-card">
+          <div class="section-header">
+            <span class="section-number">5</span>
+            <span class="section-title">งบรายได้: ประมาณการ vs รายจ่ายจริง</span>
+          </div>
+          <div class="section-body">
+            <table class="data-table">
+              <thead>
+                <tr><th>กลุ่มภารกิจ</th><th>ประมาณการ</th><th>จ่ายจริง</th><th>%</th></tr>
+              </thead>
+              <tbody id="tbl-sec5">
+                <tr><td contenteditable="true">สนับสนุนบริหาร</td><td contenteditable="true">3,935.68</td><td contenteditable="true">1,117.40</td><td contenteditable="true">28.4%</td></tr>
+                <tr><td contenteditable="true">มนุษยศาสตร์</td><td contenteditable="true">574.40</td><td contenteditable="true">250.08</td><td contenteditable="true">43.5%</td></tr>
+                <tr><td contenteditable="true">วิทยาศาสตร์สุขภาพ</td><td contenteditable="true">2,287.16</td><td contenteditable="true">607.56</td><td contenteditable="true">26.6%</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Section 6 -->
+        <div class="section-card">
+          <div class="section-header">
+            <span class="section-number">6</span>
+            <span class="section-title">รายได้สะสมคงเหลือรวม</span>
+          </div>
+          <div class="section-body">
+            <div style="text-align:center; font-weight:bold; color:#b91c1c; font-size:8.5pt;" contenteditable="true">
+              คงเหลือรวม 3,116.262 ล้านบาท
+            </div>
+            <div class="chart-wrapper"><canvas id="chart6"></canvas></div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Signature Area -->
+      <footer class="signature-area" id="signature-area">
+        <div contenteditable="true">ผู้จัดทำ: งานวิเคราะห์งบประมาณและแผนงาน</div>
+        <div contenteditable="true">ผู้อนุมัติ: Vice President for Finance</div>
+        <div contenteditable="true">วันที่พิมพ์: 27 ตุลาคม 2026</div>
+      </footer>
+
+    </div>
+  </main>
+
+  <script>
+    let chart1, chart2, chart4, chart6;
+
+    window.addEventListener('DOMContentLoaded', () => {
+      initCharts();
+      syncFormToA4();
+    });
+
+    // Reset Data & Sync Form
+    function syncFormToA4() {
+      const title = document.getElementById('in-title').value;
+      const subtitle = document.getElementById('in-subtitle').value;
+      const asset = parseFloat(document.getElementById('in-asset').value) || 0;
+      const liability = parseFloat(document.getElementById('in-liability').value) || 0;
+      const income = parseFloat(document.getElementById('in-income').value) || 0;
+      const expense = parseFloat(document.getElementById('in-expense').value) || 0;
+      const bGov = parseFloat(document.getElementById('in-b-gov').value) || 0;
+      const bRev = parseFloat(document.getElementById('in-b-rev').value) || 0;
+
+      document.getElementById('out-title').innerText = title;
+      document.getElementById('out-subtitle').innerText = subtitle;
+      document.getElementById('val-asset').innerText = asset.toLocaleString('th-TH', {minimumFractionDigits: 3});
+      document.getElementById('val-liability').innerText = liability.toLocaleString('th-TH', {minimumFractionDigits: 3});
+      document.getElementById('val-equity').innerText = (asset - liability).toLocaleString('th-TH', {minimumFractionDigits: 3});
+      document.getElementById('val-income').innerText = income.toLocaleString('th-TH', {minimumFractionDigits: 3});
+      document.getElementById('val-expense').innerText = expense.toLocaleString('th-TH', {minimumFractionDigits: 3});
+
+      const bTotal = bGov + bRev;
+      document.getElementById('val-budget-total').innerText = bTotal.toLocaleString('th-TH', {minimumFractionDigits: 3});
+      document.getElementById('val-b-gov-txt').innerText = bGov.toLocaleString('th-TH', {minimumFractionDigits: 3});
+      document.getElementById('val-b-rev-txt').innerText = bRev.toLocaleString('th-TH', {minimumFractionDigits: 3});
+
+      if (chart1) {
+        chart1.data.datasets[0].data = [asset, liability, asset - liability, income, expense];
+        chart1.update();
+      }
+      if (chart2) {
+        chart2.data.datasets[0].data = [bGov, bRev];
+        chart2.update();
+      }
+    }
+
+    function resetToFullSample() {
+      document.getElementById('in-title').value = 'รายงานสถานะทางการเงินและผลการดำเนินงาน';
+      document.getElementById('in-subtitle').value = 'มหาวิทยาลัยนเรศวร ประจำปีงบประมาณ 2569';
+      document.getElementById('in-asset').value = 12438.100;
+      document.getElementById('in-liability').value = 1036.216;
+      document.getElementById('in-income').value = 3946.034;
+      document.getElementById('in-expense').value = 3097.069;
+      document.getElementById('in-b-gov').value = 2584.343;
+      document.getElementById('in-b-rev').value = 4693.050;
+      syncFormToA4();
+    }
+
+    // Excel Importer
+    function handleExcelImport(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, {type: 'array'});
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+
+        let asset = sheet['B2'] ? sheet['B2'].v : 12438.100;
+        let liability = sheet['B3'] ? sheet['B3'].v : 1036.216;
+        let income = sheet['B4'] ? sheet['B4'].v : 3946.034;
+        let expense = sheet['B5'] ? sheet['B5'].v : 3097.069;
+
+        document.getElementById('in-asset').value = asset;
+        document.getElementById('in-liability').value = liability;
+        document.getElementById('in-income').value = income;
+        document.getElementById('in-expense').value = expense;
+
+        syncFormToA4();
+        alert('🎉 นำเข้าข้อมูลตัวเลขและกราฟจาก Excel สำเร็จ!');
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    // Word Importer
+    function handleWordImport(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        mammoth.extractRawText({arrayBuffer: event.target.result})
+          .then(function(result) {
+            const text = result.value.trim();
+            if (text) {
+              document.getElementById('out-summary').innerText = text.substring(0, 320) + '...';
+              alert('🎉 ดึงเนื้อหาสรุปจาก Word สำเร็จ!');
+            }
+          })
+          .catch(function() { alert('แนะนำให้ใช้ไฟล์ .docx'); });
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    // Chart Renderer Engine
+    function initCharts() {
+      const ctx1 = document.getElementById('chart1').getContext('2d');
+      chart1 = new Chart(ctx1, {
+        type: 'bar',
+        data: {
+          labels: ['สินทรัพย์', 'หนี้สิน', 'ทุน', 'รายได้', 'จ่าย'],
+          datasets: [{ data: [12438.1, 1036.2, 11401.8, 3946.0, 3097.0], backgroundColor: ['#0284c7', '#dc2626', '#16a34a', '#d97706', '#64748b'] }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+      });
+
+      const ctx2 = document.getElementById('chart2').getContext('2d');
+      chart2 = new Chart(ctx2, {
+        type: 'doughnut',
+        data: { labels: ['งบแผ่นดิน', 'งบรายได้'], datasets: [{ data: [2584, 4693], backgroundColor: ['#5c1816', '#d97706'] }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+      });
+
+      const ctx4 = document.getElementById('chart4').getContext('2d');
+      chart4 = new Chart(ctx4, {
+        type: 'bar',
+        data: {
+          labels: ['บริหาร', 'มนุษย์', 'วิทย์', 'วิทย์สุขภาพ'],
+          datasets: [
+            { label: 'ประมาณการ', data: [3935, 574, 2287, 349], backgroundColor: '#cbd5e1' },
+            { label: 'รับจริง', data: [1117, 250, 404, 204], backgroundColor: '#0284c7' }
+          ]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top', labels: { boxWidth: 8, font: { size: 7 } } } } }
+      });
+
+      const ctx6 = document.getElementById('chart6').getContext('2d');
+      chart6 = new Chart(ctx6, {
+        type: 'bar',
+        data: {
+          labels: ['บริหาร', 'มนุษย์', 'วิทย์', 'สุขภาพ', 'กองทุน'],
+          datasets: [{ data: [588, 722, 258, 373, 894], backgroundColor: '#d97706' }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+      });
+    }
+  </script>
+</body>
+</html>
