@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Executive Financial Report Studio (AI Powered)</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- External Libraries -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+
+  <style>
+    :root {
+      --primary: #5c1816;
+      --primary-grad: linear-gradient(135deg, #5c1816 0%, #802320 100%);
+      --bg-slate: #0f172a;
+      --panel-bg: #1e293b;
+      --accent: #38bdf8;
+      --accent-hover: #0284c7;
+      --font-scale: 100%;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Sarabun', sans-serif;
+      background-color: var(--bg-slate);
+      color: #f8fafc;
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* Sidebar Navigation Control Panel */
+    #sidebar {
+      width: 420px;
+      min-width: 420px;
+      background: var(--panel-bg);
+      border-right: 1px solid #334155;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      z-index: 20;
+      box-shadow: 4px 0 20px rgba(0,0,0,0.4);
+    }
+
+    .sidebar-header {
+      padding: 16px 20px;
+      background: #0f172a;
+      border-bottom: 1px solid #334155;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .sidebar-header h2 {
+      font-family: 'Prompt', sans-serif;
+      font-size: 1.1rem;
+      color: var(--accent);
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .sidebar-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 18px;
+    }
+
+    /* API Key Banner */
+    .api-key-container {
+      background: #0f172a;
+      border: 1px solid #0284c7;
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 15px;
+    }
+
+    .api-key-container label {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 6px;
+    }
+
+    .api-key-input-group {
+      display: flex;
+      gap: 6px;
+    }
+
+    .api-key-input-group input {
+      flex: 1;
+      padding: 6px 10px;
+      font-size: 0.8rem;
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 4px;
+      color: #fff;
+    }
+
+    /* Import Dropzones */
+    .import-box {
+      border: 2px dashed #475569;
+      border-radius: 8px;
+      padding: 14px;
+      text-align: center;
+      background: #0f172a;
+      margin-bottom: 12px;
+      cursor: pointer;
+      transition: all 0.2s ease-in-out;
+      position: relative;
+    }
+
+    .import-box:hover {
+      border-color: var(--accent);
+      background: rgba(56, 189, 248, 0.05);
+    }
+
+    .import-box p {
+      font-size: 0.85rem;
+      color: var(--accent);
+      margin-bottom: 2px;
+    }
+
+    .import-box span {
+      font-size: 0.72rem;
+      color: #94a3b8;
+    }
+
+    .loading-overlay {
+      display: none;
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(15, 23, 42, 0.9);
+      border-radius: 6px;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 0.8rem;
+      color: var(--accent);
+    }
+
+    .spinner {
+      width: 20px;
+      height: 20px;
+      border: 2px solid #334155;
+      border-top: 2px solid var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    /* Form Fields */
+    .form-group { margin-bottom: 10px; }
+    .form-group label {
+      display: block;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #94a3b8;
+      margin-bottom: 3px;
+      text-transform: uppercase;
+    }
+
+    .form-control {
+      width: 100%;
+      padding: 7px 10px;
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 6px;
+      color: #fff;
+      font-family: 'Sarabun', sans-serif;
+      font-size: 0.85rem;
+    }
+
+    .form-control:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .btn {
+      padding: 8px 14px;
+      border-radius: 6px;
+      font-family: 'Prompt', sans-serif;
+      font-size: 0.82rem;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .btn-primary { background: #0284c7; color: white; width: 100%; }
+    .btn-primary:hover { background: #0369a1; }
+    .btn-secondary { background: #334155; color: white; }
+    .btn-secondary:hover { background: #475569; }
+
+    /* Main Canvas Display Area */
+    #main-preview {
+      flex: 1;
+      background: #1e293b;
+      overflow-y: auto;
+      padding: 25px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .preview-toolbar {
+      width: 210mm;
+      background: #0f172a;
+      padding: 10px 18px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border: 1px solid #334155;
+    }
+
+    /* A4 Paper Styling Constraints */
+    .a4-paper {
+      width: 210mm;
+      height: 296.8mm;
+      background: #ffffff;
+      color: #1e293b;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      padding: 8mm 10mm;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      font-size: var(--font-scale);
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Contenteditable Inline Editing Styles */
+    [contenteditable="true"] {
+      border-radius: 2px;
+      transition: all 0.2s;
+      outline: none;
+    }
+
+    [contenteditable="true"]:hover {
+      background-color: rgba(2, 132, 199, 0.08);
+      box-shadow: 0 0 0 1px #38bdf8;
+    }
+
+    [contenteditable="true"]:focus {
+      background-color: #fff;
+      box-shadow: 0 0 0 2px #0284c7;
+    }
+
+    /* Executive A4 Header */
+    .header-banner {
+      background: var(--primary-grad);
+      color: white;
+      padding: 8px 12px;
+      border-radius: 5px;
+      text-align: center;
+      margin-bottom: 6px;
+    }
+
+    .header-banner h1 {
+      font-family: 'Prompt', sans-serif;
+      font-size: 14.5pt;
+      font-weight: 700;
+      line-height: 1.2;
+    }
+
+    .header-banner p { font-size: 8.5pt; opacity: 0.95; margin-top: 1px; }
+
+    /* Executive AI Summary Box */
+    .exec-summary-box {
+      background-color: #fffbe6;
+      border-left: 4px solid #d97706;
+      padding: 6px 10px;
+      font-size: 8.2pt;
+      margin-bottom: 6px;
+      border-radius: 0 4px 4px 0;
+      line-height: 1.35;
+      min-height: 40px;
+    }
+
+    .exec-summary-box strong { color: #b45309; }
+
+    /* 6 Grid Section Cards */
+    .grid-container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px 10px;
+      flex: 1;
+    }
+
+    .section-card {
+      border: 1px solid #cbd5e1;
+      border-radius: 5px;
+      padding: 6px 8px;
+      background: #ffffff;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 4px;
+      border-bottom: 1.5px solid var(--primary);
+      padding-bottom: 2px;
+    }
+
+    .section-number {
+      background: var(--primary);
+      color: white;
+      width: 15px;
+      height: 15px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 7pt;
+      font-weight: bold;
+    }
+
+    .section-title {
+      font-family: 'Prompt', sans-serif;
+      font-size: 8.5pt;
+      font-weight: 600;
+      color: var(--primary);
+    }
+
+    .section-body {
+      font-size: 7.5pt;
+      line-height: 1.3;
+      color: #334155;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .chart-wrapper {
+      position: relative;
+      width: 100%;
+      height: 98px;
+      margin: 2px 0;
+    }
+
+    /* Financial Data Tables */
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 7.2pt;
+      margin-top: 2px;
+    }
+
+    .data-table th, .data-table td {
+      border: 1px solid #cbd5e1;
+      padding: 2px 4px;
+      text-align: right;
+    }
+
+    .data-table th {
+      background: #f1f5f9;
+      color: #1e293b;
+      font-weight: 600;
+      text-align: center;
+    }
+
+    .data-table td:first-child { text-align: left; }
+    .highlight-val { color: #b91c1c; font-weight: bold; }
+    .placeholder-txt { color: #94a3b8; font-style: italic; }
+
+    /* Page Footer */
+    .signature-area {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 4px;
+      padding-top: 4px;
+      border-top: 1px dashed #cbd5e1;
+      font-size: 7.5pt;
+      color: #64748b;
+    }
+
+    /* Perfect A4 Printing Engine Rules */
+    @media print {
+      body { background: white !important; color: black !important; }
+      #sidebar, .preview-toolbar { display: none !important; }
+      #main-preview { padding: 0 !important; background: white !important; overflow: visible !important; }
+      .a4-paper {
+        box-shadow: none !important;
+        margin: 0 !important;
+        width: 210mm !important;
+        height: 296.8mm !important;
+        page-break-after: always;
+      }
+      [contenteditable="true"]:hover, [contenteditable="true"]:focus {
+        background: transparent !important;
+        box-shadow: none !important;
+      }
+      @page { size: A4 portrait; margin: 0; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Left Sidebar Controls -->
+  <aside id="sidebar">
+    <div class="sidebar-header">
+      <h2>🤖 Executive Studio AI</h2>
+      <button class="btn btn-secondary" style="padding:4px 8px; font-size:0.75rem;" onclick="clearAllData()">🧹 ล้างข้อมูล</button>
+    </div>
+
+    <div class="sidebar-content">
+
+      <!-- Gemini API Integration Box -->
+      <div class="api-key-container">
+        <label>🔑 Google Gemini API Key</label>
+        <div class="api-key-input-group">
+          <input type="password" id="gemini-api-key" placeholder="วาง API Key ที่นี่..." onchange="saveApiKey()">
+          <button class="btn btn-secondary" style="padding:4px 8px;" onclick="toggleKeyVisibility()">👁️</button>
+        </div>
+        <span style="font-size:0.68rem; color:#64748b; display:block; margin-top:4px;">
+          * ใส่ API Key เพื่อให้อ่านไฟล์ Word สรุปสาระสำคัญอัตโนมัติ
+        </span>
+      </div>
+
+      <!-- File Importers -->
+      <div class="import-box" onclick="document.getElementById('file-word').click()">
+        <p><strong>📝 นำเข้าไฟล์ Word (.docx) + AI</strong></p>
+        <span>อ่านเนื้อหา AI ย่อความสรุปสาระสำคัญอัตโนมัติ</span>
+        <input type="file" id="file-word" accept=".docx" style="display:none;" onchange="handleWordImport(event)">
+        <div class="loading-overlay" id="loader-word">
+          <div class="spinner"></div>
+          <span>Gemini AI กำลังวิเคราะห์...</span>
+        </div>
+      </div>
+
+      <div class="import-box" onclick="document.getElementById('file-excel').click()">
+        <p><strong>📊 นำเข้าไฟล์ Excel (.xlsx / .xls)</strong></p>
+        <span>สกัดตารางและดึงตัวเลขงบประมาณลงกราฟ</span>
+        <input type="file" id="file-excel" accept=".xlsx, .xls" style="display:none;" onchange="handleExcelImport(event)">
+        <div class="loading-overlay" id="loader-excel">
+          <div class="spinner"></div>
+          <span>กำลังอ่านตาราง Excel...</span>
+        </div>
+      </div>
+
+      <hr style="border-color:#334155; margin:14px 0;">
+
+      <!-- Manual Inputs -->
+      <div class="form-group">
+        <label>หัวข้อรายงานหลัก</label>
+        <input type="text" id="in-title" class="form-control" placeholder="พิมพ์ชื่อหัวข้อรายงาน..." oninput="syncFormToA4()">
+      </div>
+      <div class="form-group">
+        <label>หน่วยงาน / งวดปีงบประมาณ</label>
+        <input type="text" id="in-subtitle" class="form-control" placeholder="เช่น ประจำปีงบประมาณ 2569..." oninput="syncFormToA4()">
+      </div>
+      
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
+        <div class="form-group">
+          <label>สินทรัพย์รวม (ลบ.)</label>
+          <input type="number" id="in-asset" class="form-control" placeholder="0.000" step="0.001" onchange="syncFormToA4()">
+        </div>
+        <div class="form-group">
+          <label>หนี้สินรวม (ลบ.)</label>
+          <input type="number" id="in-liability" class="form-control" placeholder="0.000" step="0.001" onchange="syncFormToA4()">
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
+        <div class="form-group">
+          <label>รายได้รวม (ลบ.)</label>
+          <input type="number" id="in-income" class="form-control" placeholder="0.000" step="0.001" onchange="syncFormToA4()">
+        </div>
+        <div class="form-group">
+          <label>ค่าใช้จ่ายรวม (ลบ.)</label>
+          <input type="number" id="in-expense" class="form-control" placeholder="0.000" step="0.001" onchange="syncFormToA4()">
+        </div>
+      </div>
+
+    </div>
+  </aside>
+
+  <!-- Printable A4 Executive Canvas -->
+  <main id="main-preview">
+    <div class="preview-toolbar">
+      <span style="color:#e2e8f0; font-size:0.85rem;">📄 ตัวอย่างกระดาษ A4 (คลิกแก้ไขข้อความบนกระดาษได้โดยตรง)</span>
+      <button class="btn btn-primary" style="width:auto;" onclick="window.print()">🖨️ พิมพ์เอกสาร / บันทึก PDF</button>
+    </div>
+
+    <div class="a4-paper" id="paper">
+      
+      <!-- Banner Header -->
+      <header class="header-banner">
+        <h1 contenteditable="true" id="out-title">รายงานสถานะทางการเงินและผลการดำเนินงาน</h1>
+        <p contenteditable="true" id="out-subtitle">[ ระบุชื่อหน่วยงาน / ปีงบประมาณ ]</p>
+      </header>
+
+      <!-- Executive AI Summary -->
+      <div class="exec-summary-box" id="exec-summary-box">
+        <strong>📌 สรุปสาระสำคัญ:</strong>
+        <span contenteditable="true" id="out-summary" class="placeholder-txt">
+          (อัปโหลดไฟล์ Word เพื่อให้ Gemini AI ช่วยวิเคราะห์ หรือคลิกพิมพ์ข้อความสรุปได้เลย)
+        </span>
+      </div>
+
+      <!-- 6 Dashboard Cards Grid -->
+      <div class="grid-container">
+        
+        <!-- Section 1 -->
+        <div class="section-card">
+          <div class="section-header">
+            <span class="section-number">1</span>
+            <span class="section-title">ฐานะการเงินและผลการดำเนินงาน</span>
+          </div>
+          <div class="section-body">
+            <div contenteditable="true">
+              • <strong>สินทรัพย์รวม:</strong> <span id="val-asset" class="highlight-val"></span> ล้านบาท<br>
+              • <strong>หนี้สินรวม:</strong> <span id="val-liability"></span> | <strong>ทุน:</strong> <span id="val-equity"></span> ล้านบาท<br>
+              • <strong>รายได้:</strong> <span id="val-income"></span> | <strong>จ่าย:</strong> <span id="val-expense"></span> ล้านบาท
+            </div>
+            <div class="chart-wrapper"><canvas id="chart1"></canvas></div>
+          </div>
+        </div>
+
+        <!-- Section 2 -->
+        <div class="section-card">
+          <div class="section-header">
+            <span class="section-number">2</span>
+            <span class="section-title">การบริหารจัดการงบประมาณรวม</span>
+          </div>
+          <div class="section-body">
+            <div style="text-align:center; font-weight:bold; color:var(--primary); font-size:8pt;" contenteditable="true">
+              งบประมาณรวมทั้งสิ้น <span id="val-budget-total">-</span> ล้านบาท
+            </div>
+            <div style="display:flex; align-items:center; height:100%;">
+              <div style="width:45%;" class="chart-wrapper"><canvas id="chart2"></canvas></div>
+              <div style="width:55%; font-size:7.2pt;" contenteditable="true">
+                <strong>1. งบแผ่นดิน:</strong> <span id="val-b-gov-txt">-</span> ลบ.<br>
+                <strong>2. งบรายได้:</strong> <span id="val-b-rev-txt">-</span> ลบ.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 3 -->
+        <div class="section-card">
+          <div class="section-header">
+            <span class="section-number">3</span>
+            <span class="section-title">ประสิทธิภาพการใช้งบแผ่นดิน</span>
+          </div>
+          <div class="section-body">
+            <table class="data-table">
+              <thead>
+                <tr><th>รายการงบประมาณ</th><th>จัดสรร</th><th>ใช้จริง</th><th>%</th></tr>
+              </thead>
+              <tbody id="tbl-sec3">
+                <tr><td contenteditable="true">งบบุคลากร</td><td contenteditable="true"></td><td contenteditable="true"></td><td contenteditable="true"></td></tr>
+                <tr><td contenteditable="true">งบดำเนินงาน</td><td contenteditable="true"></td><td contenteditable="true"></td><td contenteditable="true"></td></tr>
+                <tr><td contenteditable="true">งบลงทุน/อุดหนุน</td><td contenteditable="true"></td><td contenteditable="true"></td><td contenteditable="true"></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Section 4 -->
+        <div class="section-card">
+          <div class="section-header">
+            <span class="section-number">4</span>
+            <span class="section-title">งบรายได้: ประมาณการ vs รายรับจริง</span>
+          </div>
+          <div class="section-body">
+            <div class="chart-wrapper"><canvas id="chart4"></canvas></div>
+          </div>
+        </div>
+
+        <!-- Section 5 -->
+        <div class="section-card">
+          <div class="section-header">
+            <span class="section-number">5</span>
+            <span class="section-title">งบรายได้: ประมาณการ vs รายจ่ายจริง</span>
+          </div>
+          <div class="section-body">
+            <table class="data-table">
+              <thead>
+                <tr><th>กลุ่มภารกิจ</th><th>ประมาณการ</th><th>จ่ายจริง</th><th>%</th></tr>
+              </thead>
+              <tbody id="tbl-sec5">
+                <tr><td contenteditable="true">สนับสนุนบริหาร</td><td contenteditable="true"></td><td contenteditable="true"></td><td contenteditable="true"></td></tr>
+                <tr><td contenteditable="true">มนุษยศาสตร์</td><td contenteditable="true"></td><td contenteditable="true"></td><td contenteditable="true"></td></tr>
+                <tr><td contenteditable="true">วิทยาศาสตร์สุขภาพ</td><td contenteditable="true"></td><td contenteditable="true"></td><td contenteditable="true"></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Section 6 -->
+        <div class="section-card">
+          <div class="section-header">
+            <span class="section-number">6</span>
+            <span class="section-title">รายได้สะสมคงเหลือรวม</span>
+          </div>
+          <div class="section-body">
+            <div style="text-align:center; font-weight:bold; color:#b91c1c; font-size:8pt;" contenteditable="true">
+              คงเหลือรวม <span id="val-accumulated">-</span> ล้านบาท
+            </div>
+            <div class="chart-wrapper"><canvas id="chart6"></canvas></div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Signature Area -->
+      <footer class="signature-area" id="signature-area">
+        <div contenteditable="true">ผู้จัดทำ: .......................................</div>
+        <div contenteditable="true">ผู้อนุมัติ: .......................................</div>
+        <div contenteditable="true" id="out-date">วันที่พิมพ์: -</div>
+      </footer>
+
+    </div>
+  </main>
+
+  <script>
+    let chart1, chart2, chart4, chart6;
+
+    window.addEventListener('DOMContentLoaded', () => {
+      // Restore API Key if saved
+      const savedKey = localStorage.getItem('gemini_api_key');
+      if (savedKey) document.getElementById('gemini-api-key').value = savedKey;
+
+      // Set today date
+      const today = new Date();
+      const options = { year: 'numeric', month: 'long', day: 'numeric' };
+      document.getElementById('out-date').innerText = 'วันที่พิมพ์: ' + today.toLocaleDateString('th-TH', options);
+
+      initCharts();
+      clearAllData(); // Ensure initial Clean State
+    });
+
+    function saveApiKey() {
+      const key = document.getElementById('gemini-api-key').value.trim();
+      localStorage.setItem('gemini_api_key', key);
+    }
+
+    function toggleKeyVisibility() {
+      const el = document.getElementById('gemini-api-key');
+      el.type = el.type === 'password' ? 'text' : 'password';
+    }
+
+    function syncFormToA4() {
+      const title = document.getElementById('in-title').value || 'รายงานสถานะทางการเงินและผลการดำเนินงาน';
+      const subtitle = document.getElementById('in-subtitle').value || '[ ระบุชื่อหน่วยงาน / ปีงบประมาณ ]';
+      const asset = parseFloat(document.getElementById('in-asset').value) || 0;
+      const liability = parseFloat(document.getElementById('in-liability').value) || 0;
+      const income = parseFloat(document.getElementById('in-income').value) || 0;
+      const expense = parseFloat(document.getElementById('in-expense').value) || 0;
+
+      document.getElementById('out-title').innerText = title;
+      document.getElementById('out-subtitle').innerText = subtitle;
+      
+      document.getElementById('val-asset').innerText = asset ? asset.toLocaleString('th-TH', {minimumFractionDigits: 3}) : '-';
+      document.getElementById('val-liability').innerText = liability ? liability.toLocaleString('th-TH', {minimumFractionDigits: 3}) : '-';
+      document.getElementById('val-equity').innerText = (asset || liability) ? (asset - liability).toLocaleString('th-TH', {minimumFractionDigits: 3}) : '-';
+      document.getElementById('val-income').innerText = income ? income.toLocaleString('th-TH', {minimumFractionDigits: 3}) : '-';
+      document.getElementById('val-expense').innerText = expense ? expense.toLocaleString('th-TH', {minimumFractionDigits: 3}) : '-';
+
+      if (chart1) {
+        chart1.data.datasets[0].data = [asset, liability, asset - liability, income, expense];
+        chart1.update();
+      }
+    }
+
+    function clearAllData() {
+      document.getElementById('in-title').value = '';
+      document.getElementById('in-subtitle').value = '';
+      document.getElementById('in-asset').value = '';
+      document.getElementById('in-liability').value = '';
+      document.getElementById('in-income').value = '';
+      document.getElementById('in-expense').value = '';
+      
+      document.getElementById('out-summary').innerText = '(อัปโหลดไฟล์ Word เพื่อให้ Gemini AI ช่วยวิเคราะห์ หรือคลิกพิมพ์ข้อความสรุปได้เลย)';
+      document.getElementById('out-summary').classList.add('placeholder-txt');
+
+      syncFormToA4();
+    }
+
+    // AI Word Integration powered by Gemini API
+    async function handleWordImport(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const loader = document.getElementById('loader-word');
+      loader.style.display = 'flex';
+
+      try {
+        const arrayBuffer = await file.arrayBuffer();
+        const result = await mammoth.extractRawText({ arrayBuffer: arrayBuffer });
+        const rawText = result.value || '';
+
+        const apiKey = document.getElementById('gemini-api-key').value.trim();
+
+        if (apiKey) {
+          // Send raw Word document to Gemini API for Executive Summarization & Extraction
+          const aiResponse = await callGeminiAI(apiKey, rawText);
+          
+          if (aiResponse) {
+            if (aiResponse.summary) {
+              const summaryElem = document.getElementById('out-summary');
+              summaryElem.innerText = aiResponse.summary;
+              summaryElem.classList.remove('placeholder-txt');
+            }
+            if (aiResponse.asset) document.getElementById('in-asset').value = aiResponse.asset;
+            if (aiResponse.liability) document.getElementById('in-liability').value = aiResponse.liability;
+            if (aiResponse.income) document.getElementById('in-income').value = aiResponse.income;
+            if (aiResponse.expense) document.getElementById('in-expense').value = aiResponse.expense;
+            if (aiResponse.title) document.getElementById('in-title').value = aiResponse.title;
+            if (aiResponse.subtitle) document.getElementById('in-subtitle').value = aiResponse.subtitle;
+          }
+        } else {
+          // Fallback parser if API key is not provided
+          fallbackExtractWordText(rawText);
+        }
+
+        syncFormToA4();
+        alert('🎉 นำเข้าและวิเคราะห์เนื้อหาไฟล์ Word เรียบร้อยแล้ว!');
+      } catch (err) {
+        alert('เกิดข้อผิดพลาดในการอ่านไฟล์ Word: ' + err.message);
+      } finally {
+        loader.style.display = 'none';
+        event.target.value = '';
+      }
+    }
+
+    // Call Gemini API (gemini-2.5-flash) for JSON-structured extraction
+    async function callGeminiAI(apiKey, documentText) {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+
+      const prompt = `
+        คุณเป็นนักวิเคราะห์ทางการเงินสำหรับผู้บริหาร 
+        หน้าที่ของคุณคืออ่านเอกสารบันทึกข้อความทางการเงินต่อไปนี้ แล้วทำการสกัดข้อมูลและสรุปเนื้อหาเป็น JSON:
+
+        กฎการประมวลผล:
+        1. ตัดส่วนหัวกระดาษราชการออกให้หมด (เช่น บันทึกข้อความ, ส่วนราชการ, ที่ อว, เรื่อง, เรียน)
+        2. สรุปเฉพาะ "สาระสำคัญทางการเงินและผลการดำเนินงาน" ความยาวไม่เกิน 3-4 บรรทัด (ภาษาไทย สรุปกระชับ ผู้บริหารอ่านเข้าใจทันที)
+        3. ดึงตัวเลข สินทรัพย์รวม, หนี้สินรวม, รายได้รวม, ค่าใช้จ่ายรวม (ในหน่วยล้านบาท) หากไม่พบให้ใส่ null
+        4. ดึงชื่อหน่วยงานและงวดปีงบประมาณ
+
+        ตอบกลับด้วย JSON รูปแบบนี้เท่านั้น ห้ามใส่ข้อความอื่นนอกเหนือจาก JSON:
+        {
+          "summary": "ข้อความสรุปสาระสำคัญผู้บริหาร...",
+          "asset": ตัวเลขหรือ null,
+          "liability": ตัวเลขหรือ null,
+          "income": ตัวเลขหรือ null,
+          "expense": ตัวเลขหรือ null,
+          "title": "หัวข้อรายงาน",
+          "subtitle": "ชื่อหน่วยงาน/งวดปีงบประมาณ"
+        }
+
+        เนื้อหาเอกสาร:
+        ${documentText.substring(0, 5000)}
+      `;
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }]
+        })
+      });
+
+      if (!response.ok) throw new Error('API Request Failed');
+
+      const data = await response.json();
+      const replyText = data.candidates[0].content.parts[0].text;
+      
+      // Clean potential Markdown codeblock wraps ```json ... ```
+      const cleanedJson = replyText.replace(/```json/g, '').replace(/```/g, '').trim();
+      return JSON.parse(cleanedJson);
+    }
+
+    // Fallback word extractor if API Key is empty
+    function fallbackExtractWordText(text) {
+      let lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+      let cleanLines = lines.filter(line => 
+        !line.startsWith('บันทึกข้อความ') &&
+        !line.startsWith('ส่วนราชการ') &&
+        !line.startsWith('ที่ ') &&
+        !line.startsWith('เรื่อง ') &&
+        !line.startsWith('เรียน ')
+      );
+
+      let summary = cleanLines.join(' ');
+      if (summary.length > 300) summary = summary.substring(0, 300) + '...';
+
+      if (summary) {
+        const summaryElem = document.getElementById('out-summary');
+        summaryElem.innerText = summary;
+        summaryElem.classList.remove('placeholder-txt');
+      }
+
+      const assetMatch = text.match(/สินทรัพย์รวม\s*([0-9,]+\.?[0-9]*)/);
+      const liabilityMatch = text.match(/หนี้สินรวม\s*([0-9,]+\.?[0-9]*)/);
+      const incomeMatch = text.match(/รายได้รวม\s*([0-9,]+\.?[0-9]*)/);
+      const expenseMatch = text.match(/ค่าใช้จ่ายรวม\s*([0-9,]+\.?[0-9]*)/);
+
+      if (assetMatch) document.getElementById('in-asset').value = parseFloat(assetMatch[1].replace(/,/g, ''));
+      if (liabilityMatch) document.getElementById('in-liability').value = parseFloat(liabilityMatch[1].replace(/,/g, ''));
+      if (incomeMatch) document.getElementById('in-income').value = parseFloat(incomeMatch[1].replace(/,/g, ''));
+      if (expenseMatch) document.getElementById('in-expense').value = parseFloat(expenseMatch[1].replace(/,/g, ''));
+    }
+
+    // Excel Importer
+    function handleExcelImport(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const loader = document.getElementById('loader-excel');
+      loader.style.display = 'flex';
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const data = new Uint8Array(e.target.result);
+          const workbook = XLSX.read(data, {type: 'array'});
+          const sheet = workbook.Sheets[workbook.SheetNames[0]];
+
+          let asset = sheet['B2'] ? sheet['B2'].v : 0;
+          let liability = sheet['B3'] ? sheet['B3'].v : 0;
+          let income = sheet['B4'] ? sheet['B4'].v : 0;
+          let expense = sheet['B5'] ? sheet['B5'].v : 0;
+
+          if (asset) document.getElementById('in-asset').value = asset;
+          if (liability) document.getElementById('in-liability').value = liability;
+          if (income) document.getElementById('in-income').value = income;
+          if (expense) document.getElementById('in-expense').value = expense;
+
+          syncFormToA4();
+          alert('🎉 นำเข้าข้อมูลตาราง Excel เรียบร้อยแล้ว!');
+        } catch(err) {
+          alert('เกิดข้อผิดพลาดในการอ่านไฟล์ Excel');
+        } finally {
+          loader.style.display = 'none';
+          event.target.value = '';
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    // Chart.js Chart Initialization
+    function initCharts() {
+      const ctx1 = document.getElementById('chart1').getContext('2d');
+      chart1 = new Chart(ctx1, {
+        type: 'bar',
+        data: {
+          labels: ['สินทรัพย์', 'หนี้สิน', 'ทุน', 'รายได้', 'จ่าย'],
+          datasets: [{ data: [0, 0, 0, 0, 0], backgroundColor: ['#0284c7', '#dc2626', '#16a34a', '#d97706', '#64748b'] }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+      });
+
+      const ctx2 = document.getElementById('chart2').getContext('2d');
+      chart2 = new Chart(ctx2, {
+        type: 'doughnut',
+        data: { labels: ['งบแผ่นดิน', 'งบรายได้'], datasets: [{ data: [0, 0], backgroundColor: ['#5c1816', '#d97706'] }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+      });
+
+      const ctx4 = document.getElementById('chart4').getContext('2d');
+      chart4 = new Chart(ctx4, {
+        type: 'bar',
+        data: {
+          labels: ['บริหาร', 'มนุษย์', 'วิทย์', 'วิทย์สุขภาพ'],
+          datasets: [
+            { label: 'ประมาณการ', data: [0, 0, 0, 0], backgroundColor: '#cbd5e1' },
+            { label: 'รับจริง', data: [0, 0, 0, 0], backgroundColor: '#0284c7' }
+          ]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top', labels: { boxWidth: 8, font: { size: 7 } } } } }
+      });
+
+      const ctx6 = document.getElementById('chart6').getContext('2d');
+      chart6 = new Chart(ctx6, {
+        type: 'bar',
+        data: {
+          labels: ['บริหาร', 'มนุษย์', 'วิทย์', 'สุขภาพ', 'กองทุน'],
+          datasets: [{ data: [0, 0, 0, 0, 0], backgroundColor: '#d97706' }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+      });
+    }
+  </script>
+</body>
+</html>
