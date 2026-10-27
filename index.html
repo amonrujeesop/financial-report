@@ -3,14 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Executive Report Studio - Blank Slate</title>
+  <title>Executive Report Studio - Clean & Blank</title>
   
-  <!-- Google Fonts: Prompt & Sarabun -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   
-  <!-- Chart.js, SheetJS, Mammoth.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
@@ -353,19 +351,19 @@
       
       <div class="form-group">
         <label>สินทรัพย์รวม (ล้านบาท)</label>
-        <input type="number" id="in-asset" class="form-control" placeholder="0.000" step="0.001" onchange="syncFormToA4()">
+        <input type="number" id="in-asset" class="form-control" placeholder="" step="0.001" onchange="syncFormToA4()">
       </div>
       <div class="form-group">
         <label>หนี้สินรวม (ล้านบาท)</label>
-        <input type="number" id="in-liability" class="form-control" placeholder="0.000" step="0.001" onchange="syncFormToA4()">
+        <input type="number" id="in-liability" class="form-control" placeholder="" step="0.001" onchange="syncFormToA4()">
       </div>
       <div class="form-group">
         <label>รายได้รวม (ล้านบาท)</label>
-        <input type="number" id="in-income" class="form-control" placeholder="0.000" step="0.001" onchange="syncFormToA4()">
+        <input type="number" id="in-income" class="form-control" placeholder="" step="0.001" onchange="syncFormToA4()">
       </div>
       <div class="form-group">
         <label>ค่าใช้จ่ายรวม (ล้านบาท)</label>
-        <input type="number" id="in-expense" class="form-control" placeholder="0.000" step="0.001" onchange="syncFormToA4()">
+        <input type="number" id="in-expense" class="form-control" placeholder="" step="0.001" onchange="syncFormToA4()">
       </div>
     </div>
   </aside>
@@ -404,9 +402,9 @@
           </div>
           <div class="section-body">
             <div contenteditable="true">
-              • <strong>สินทรัพย์รวม:</strong> <span id="val-asset" class="highlight-val">0.000</span> ล้านบาท<br>
-              • <strong>หนี้สินรวม:</strong> <span id="val-liability">0.000</span> | <strong>ทุน:</strong> <span id="val-equity">0.000</span> ล้านบาท<br>
-              • <strong>รายได้:</strong> <span id="val-income">0.000</span> | <strong>จ่าย:</strong> <span id="val-expense">0.000</span> ล้านบาท
+              • <strong>สินทรัพย์รวม:</strong> <span id="val-asset" class="highlight-val"></span> ล้านบาท<br>
+              • <strong>หนี้สินรวม:</strong> <span id="val-liability"></span> | <strong>ทุน:</strong> <span id="val-equity"></span> ล้านบาท<br>
+              • <strong>รายได้:</strong> <span id="val-income"></span> | <strong>จ่าย:</strong> <span id="val-expense"></span> ล้านบาท
             </div>
             <div class="chart-wrapper"><canvas id="chart1"></canvas></div>
           </div>
@@ -420,13 +418,13 @@
           </div>
           <div class="section-body">
             <div style="text-align:center; font-weight:bold; color:var(--primary); font-size:8.5pt;" contenteditable="true">
-              งบประมาณรวมทั้งสิ้น <span id="val-budget-total">0.000</span> ล้านบาท
+              งบประมาณรวมทั้งสิ้น <span id="val-budget-total"></span> ล้านบาท
             </div>
             <div style="display:flex; align-items:center;">
               <div style="width:45%;" class="chart-wrapper"><canvas id="chart2"></canvas></div>
               <div style="width:55%; font-size:7.5pt;" contenteditable="true">
-                <strong>1. งบแผ่นดิน:</strong> <span id="val-b-gov-txt">0.000</span> ลบ.<br>
-                <strong>2. งบรายได้:</strong> <span id="val-b-rev-txt">0.000</span> ลบ.
+                <strong>1. งบแผ่นดิน:</strong> <span id="val-b-gov-txt"></span> ลบ.<br>
+                <strong>2. งบรายได้:</strong> <span id="val-b-rev-txt"></span> ลบ.
               </div>
             </div>
           </div>
@@ -444,9 +442,9 @@
                 <tr><th>รายการงบประมาณ</th><th>จัดสรร</th><th>ใช้จริง</th><th>%</th></tr>
               </thead>
               <tbody id="tbl-sec3">
-                <tr><td contenteditable="true">งบบุคลากร</td><td contenteditable="true">0.00</td><td contenteditable="true">0.00</td><td contenteditable="true">0.0%</td></tr>
-                <tr><td contenteditable="true">งบดำเนินงาน</td><td contenteditable="true">0.00</td><td contenteditable="true">0.00</td><td contenteditable="true">0.0%</td></tr>
-                <tr><td contenteditable="true">งบลงทุน/อุดหนุน</td><td contenteditable="true">0.00</td><td contenteditable="true">0.00</td><td contenteditable="true">0.0%</td></tr>
+                <tr><td contenteditable="true">งบบุคลากร</td><td contenteditable="true"></td><td contenteditable="true"></td><td contenteditable="true"></td></tr>
+                <tr><td contenteditable="true">งบดำเนินงาน</td><td contenteditable="true"></td><td contenteditable="true"></td><td contenteditable="true"></td></tr>
+                <tr><td contenteditable="true">งบลงทุน/อุดหนุน</td><td contenteditable="true"></td><td contenteditable="true"></td><td contenteditable="true"></td></tr>
               </tbody>
             </table>
           </div>
@@ -475,9 +473,9 @@
                 <tr><th>กลุ่มภารกิจ</th><th>ประมาณการ</th><th>จ่ายจริง</th><th>%</th></tr>
               </thead>
               <tbody id="tbl-sec5">
-                <tr><td contenteditable="true">สนับสนุนบริหาร</td><td contenteditable="true">0.00</td><td contenteditable="true">0.00</td><td contenteditable="true">0.0%</td></tr>
-                <tr><td contenteditable="true">มนุษยศาสตร์</td><td contenteditable="true">0.00</td><td contenteditable="true">0.00</td><td contenteditable="true">0.0%</td></tr>
-                <tr><td contenteditable="true">วิทยาศาสตร์สุขภาพ</td><td contenteditable="true">0.00</td><td contenteditable="true">0.00</td><td contenteditable="true">0.0%</td></tr>
+                <tr><td contenteditable="true">สนับสนุนบริหาร</td><td contenteditable="true"></td><td contenteditable="true"></td><td contenteditable="true"></td></tr>
+                <tr><td contenteditable="true">มนุษยศาสตร์</td><td contenteditable="true"></td><td contenteditable="true"></td><td contenteditable="true"></td></tr>
+                <tr><td contenteditable="true">วิทยาศาสตร์สุขภาพ</td><td contenteditable="true"></td><td contenteditable="true"></td><td contenteditable="true"></td></tr>
               </tbody>
             </table>
           </div>
@@ -491,7 +489,7 @@
           </div>
           <div class="section-body">
             <div style="text-align:center; font-weight:bold; color:#b91c1c; font-size:8.5pt;" contenteditable="true">
-              คงเหลือรวม <span id="val-accumulated">0.000</span> ล้านบาท
+              คงเหลือรวม <span id="val-accumulated"></span> ล้านบาท
             </div>
             <div class="chart-wrapper"><canvas id="chart6"></canvas></div>
           </div>
@@ -514,9 +512,9 @@
 
     window.addEventListener('DOMContentLoaded', () => {
       initCharts();
+      localStorage.clear(); // ล้างความจำเก่าทั้งหมด
     });
 
-    // Clear and Sync Data
     function syncFormToA4() {
       const title = document.getElementById('in-title').value || 'รายงานสถานะทางการเงินและผลการดำเนินงาน';
       const subtitle = document.getElementById('in-subtitle').value || '[ ระบุชื่อหน่วยงาน / ปีงบประมาณ ]';
@@ -527,11 +525,11 @@
 
       document.getElementById('out-title').innerText = title;
       document.getElementById('out-subtitle').innerText = subtitle;
-      document.getElementById('val-asset').innerText = asset.toLocaleString('th-TH', {minimumFractionDigits: 3});
-      document.getElementById('val-liability').innerText = liability.toLocaleString('th-TH', {minimumFractionDigits: 3});
-      document.getElementById('val-equity').innerText = (asset - liability).toLocaleString('th-TH', {minimumFractionDigits: 3});
-      document.getElementById('val-income').innerText = income.toLocaleString('th-TH', {minimumFractionDigits: 3});
-      document.getElementById('val-expense').innerText = expense.toLocaleString('th-TH', {minimumFractionDigits: 3});
+      document.getElementById('val-asset').innerText = asset ? asset.toLocaleString('th-TH', {minimumFractionDigits: 3}) : '';
+      document.getElementById('val-liability').innerText = liability ? liability.toLocaleString('th-TH', {minimumFractionDigits: 3}) : '';
+      document.getElementById('val-equity').innerText = (asset || liability) ? (asset - liability).toLocaleString('th-TH', {minimumFractionDigits: 3}) : '';
+      document.getElementById('val-income').innerText = income ? income.toLocaleString('th-TH', {minimumFractionDigits: 3}) : '';
+      document.getElementById('val-expense').innerText = expense ? expense.toLocaleString('th-TH', {minimumFractionDigits: 3}) : '';
 
       if (chart1) {
         chart1.data.datasets[0].data = [asset, liability, asset - liability, income, expense];
@@ -551,7 +549,6 @@
       syncFormToA4();
     }
 
-    // Excel Importer
     function handleExcelImport(event) {
       const file = event.target.files[0];
       if (!file) return;
@@ -578,7 +575,6 @@
       reader.readAsArrayBuffer(file);
     }
 
-    // Word Importer
     function handleWordImport(event) {
       const file = event.target.files[0];
       if (!file) return;
@@ -600,7 +596,6 @@
       reader.readAsArrayBuffer(file);
     }
 
-    // Initialize Charts
     function initCharts() {
       const ctx1 = document.getElementById('chart1').getContext('2d');
       chart1 = new Chart(ctx1, {
