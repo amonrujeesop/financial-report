@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Executive Fin-Studio (AI Powered)</title>
+    
+    <!-- ฟอนต์ภาษาไทย -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700&family=Sarabun:wght@300;400;500;600&display=swap" rel="stylesheet">
+    
+    <!-- ไลบรารีสำหรับ กราฟ, อ่าน Excel, อ่าน Word, และแปลง PDF -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+    <style>
+        /* ตั้งค่าสีหลัก */
+        :root {
+            --primary: #7a1f1d;
+            --bg-sidebar: #0f172a;
+            --bg-panel: #1e293b;
+            --text-light: #f8fafc;
+        }
+        
+        * { box-sizing: border-box; }
+        body { 
+            margin: 0; font-family: 'Sarabun', sans-serif; display: flex; 
+            height: 100vh; overflow: hidden; background: #e2e8f0; color: #334155; 
+        }
+
+        /* ---------------- แถบเมนูด้านซ้าย (Sidebar) ---------------- */
+        .sidebar { 
+            width: 380px; background: var(--bg-sidebar); color: var(--text-light); 
+            display: flex; flex-direction: column; flex-shrink: 0; 
+            box-shadow: 2px 0 10px rgba(0,0,0,0.2); z-index: 10;
+        }
+        .sidebar-header { padding: 15px; background: #0b1120; border-bottom: 1px solid #1e293b; }
+        .sidebar-header h2 { margin: 0; font-family: 'Prompt'; font-size: 18px; color: #38bdf8; }
+        .sidebar-header p { margin: 4px 0 0 0; font-size: 12px; color: #94a3b8; }
+        
+        /* ระบบ Tabs */
+        .tabs { display: flex; border-bottom: 1px solid #334155; background: var(--bg-panel); }
+        .tab { 
+            flex: 1; padding: 12px; text-align: center; font-family: 'Prompt'; 
+            font-size: 14px; cursor: pointer; color: #94a3b8; transition: 0.2s; 
+        }
+        .tab.active { border-bottom: 2px solid #38bdf8; color: #38bdf8; font-weight: bold; background: var(--bg-sidebar); }
+        .tab-content { display: none; padding: 20px; overflow-y: auto; flex: 1; }
+        .tab-content.active { display: block; }
+
+        /* ฟอร์มและปุ่ม */
+        .input-group { margin-bottom: 12px; }
+        .input-group label { display: block; font-size: 12px; margin-bottom: 4px; color: #cbd5e1; }
+        .input-group input { 
+            width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #334155; 
+            background: var(--bg-panel); color: white; font-family: 'Sarabun'; 
+        }
+        .input-group input:focus { outline: none; border-color: #38bdf8; }
+        
+        .btn-upload {
+            display: block; width: 100%; padding: 12px; margin-bottom: 10px;
+            background: transparent; border: 1px dashed #475569; border-radius: 6px;
+            color: #38bdf8; font-family: 'Prompt'; font-size: 13px; text-align: center;
+            cursor: pointer; transition: 0.2s;
+        }
+        .btn-upload:hover { border-color: #38bdf8; background: rgba(56,189,248,0.1); }
+        .btn-upload strong { display: block; font-size: 14px; margin-bottom: 2px; }
+        .btn-upload span { font-size: 11px; color: #94a3b8; font-weight: normal; }
+
+        /* ---------------- พื้นที่ทำงานหลัก (Workspace) ---------------- */
+        .main-area { flex: 1; display: flex; flex-direction: column; }
+        
+        .topbar { 
+            background: white; padding: 10px 25px; display: flex; 
+            justify-content: space-between; align-items: center; 
+            border-bottom: 1px solid #cbd5e1; box-shadow: 0 1px 3px rgba(0,0,0,0.05); z-index: 5;
+        }
+        
+        .btn-pdf {
+            background: #0ea5e9; color: white; border: none; padding: 8px 16px;
+            border-radius: 6px; font-family: 'Prompt'; cursor: pointer; transition: 0.2s;
+        }
+        .btn-pdf:hover { background: #0284c7; }
+
+        .a4-wrapper { flex: 1; overflow-y: auto; padding: 30px; display: flex; justify-content: center; align-items: flex-start; }
+        
+        /* ---------------- กระดาษ A4 ---------------- */
+        .a4-paper { 
+            width: 210mm; min-height: 297mm; background: white; padding: 10mm; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15); display: flex; 
+            flex-direction: column; position: relative; 
+        }
+
+        /* ระบบแก้ข้อความตรงหน้าเว็บ */
+        [contenteditable="true"] { outline: none; border-radius: 3px; padding: 1px 4px; transition: 0.2s; }
+        [contenteditable="true"]:hover { background: #f0f9ff; box-shadow: 0 0 0 1px #bae6fd; cursor: text;}
+        [contenteditable="true"]:focus { background: #fff; box-shadow: 0 0 0 2px #0ea5e9; }
+
+        /* ดีไซน์บนกระดาษ */
+        .doc-header { text-align: center; background: var(--primary); color: white; padding: 12px; border-radius: 4px; margin-bottom: 12px; }
+        .doc-header h1 { margin: 0; font-family: 'Prompt'; font-size: 16pt; }
+        .doc-header p { margin: 4px 0 0 0; font-size: 10pt; }
+        
+        .doc-summary { background: #fffbeb; border-left: 4px solid #f59e0b; padding: 10px; font-size: 9pt; margin-bottom: 12px; line-height: 1.5;}
+        .doc-summary strong { color: #b45309; font-family: 'Prompt'; }
+
+        /* Grid 6 ส่วน */
+        .doc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; flex: 1; align-content: start;}
+        .section-card { border: 1px solid #cbd5e1; border-radius: 6px; padding: 10px; display: flex; flex-direction: column; }
+        .sec-title { 
+            font-family: 'Prompt'; font-size: 9.5pt; color: var(--primary); font-weight: bold; 
+            border-bottom: 1px solid var(--primary); padding-bottom: 4px; margin-bottom: 8px; 
+            display: flex; align-items: center; gap: 6px;
+        }
+        .sec-badge { 
+            background: var(--primary); color: white; border-radius: 50%; width: 18px; height: 18px; 
+            display: inline-flex; justify-content: center; align-items: center; font-size: 8pt; 
+        }
+        
+        .sec-content { font-size: 8pt; flex: 1; display: flex; flex-direction: column; }
+        .chart-container { height: 110px; position: relative; margin-bottom: 5px; width: 100%;}
+        
+        .data-table { width: 100%; border-collapse: collapse; margin-bottom: 5px; font-size: 7.5pt;}
+        .data-table th, .data-table td { border: 1px solid #cbd5e1; padding: 4px; text-align: right; }
+        .data-table th { background: #f8fafc; text-align: center; font-weight: bold; color: #1e293b;}
+        .data-table td:first-child { text-align: left; }
+
+        /* กล่องพิมพ์บรรยายเนื้อหาเพิ่มเติม (ตามที่ Request) */
+        .desc-box { 
+            background: #f8fafc; border: 1px dashed #cbd5e1; padding: 6px; 
+            border-radius: 4px; font-size: 8pt; color: #475569; 
+            min-height: 40px; margin-top: auto; 
+        }
+
+        .footer { display: flex; justify-content: space-between; margin-top: 15px; padding-top: 10px; border-top: 1px dashed #cbd5e1; font-size: 8pt; color: #64748b; }
+
+        /* ซ่อน UI เมื่อพิมพ์ PDF */
+        @media print {
+            body { background: white !important; }
+            .sidebar, .topbar { display: none !important; }
+            .a4-wrapper { padding: 0 !important; overflow: visible !important; }
+            .a4-paper { box-shadow: none !important; width: 210mm !important; height: 297mm !important; }
+            [contenteditable="true"] { outline: none !important; border: none !important; background: transparent !important; box-shadow: none !important;}
+        }
+    </style>
+</head>
+<body>
+
+    <!-- แถบเมนูซ้ายมือ (Sidebar) -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <h2>📊 Executive Fin-Studio</h2>
+            <p>ระบบสร้างรายงานผู้บริหารอัจฉริยะ (AI Powered)</p>
+        </div>
+
+        <div class="tabs">
+            <div class="tab active" onclick="openTab('tab-data')">ข้อมูล (Data)</div>
+            <div class="tab" onclick="openTab('tab-design')">ตกแต่ง (Design)</div>
+        </div>
+
+        <!-- แท็บข้อมูล -->
+        <div id="tab-data" class="tab-content active">
+            <!-- Gemini API -->
+            <div style="background: #1e293b; padding: 10px; border-radius: 6px; border: 1px solid #334155; margin-bottom: 15px;">
+                <label style="font-size: 11px; color: #38bdf8; display: block; margin-bottom: 5px;">🔑 ตั้งค่า Gemini AI (วิเคราะห์ข้อความ Word)</label>
+                <input type="password" id="gemini-key" placeholder="วาง API Key ที่นี่ (ถ้ามี)..." style="width: 100%; padding: 6px; border-radius: 4px; background: #0f172a; border: 1px solid #475569; color: white; font-size: 11px;">
+            </div>
+
+            <!-- ปุ่มอัปโหลดไฟล์ -->
+            <label class="btn-upload">
+                <strong>📊 นำเข้าไฟล์ Excel (.xlsx)</strong>
+                <span>ดึงตัวเลขและตารางเข้ากระดาษอัตโนมัติ</span>
+                <input type="file" style="display: none;" accept=".xlsx, .xls" onchange="handleExcelImport(event)">
+            </label>
+
+            <label class="btn-upload">
+                <strong>📝 นำเข้าไฟล์ Word (.docx)</strong>
+                <span>ให้ AI ช่วยอ่านและสรุปเป็นข้อความให้ทันที</span>
+                <input type="file" style="display: none;" accept=".docx, .doc" onchange="handleWordImport(event)">
+            </label>
+
+            <hr style="border-color: #334155; margin: 15px 0;">
+
+            <!-- กรอกข้อมูลตัวเลข (ถ้าไม่ใช้ไฟล์) -->
+            <div class="input-group"><label>สินทรัพย์รวม (ล้านบาท)</label><input type="number" id="in-asset" placeholder="0.00" step="0.01" onchange="updateData()"></div>
+            <div class="input-group"><label>หนี้สินรวม (ล้านบาท)</label><input type="number" id="in-liability" placeholder="0.00" step="0.01" onchange="updateData()"></div>
+            <div class="input-group"><label>รายได้รวม (ล้านบาท)</label><input type="number" id="in-income" placeholder="0.00" step="0.01" onchange="updateData()"></div>
+            <div class="input-group"><label>ค่าใช้จ่ายรวม (ล้านบาท)</label><input type="number" id="in-expense" placeholder="0.00" step="0.01" onchange="updateData()"></div>
+        </div>
+
+        <!-- แท็บตกแต่ง -->
+        <div id="tab-design" class="tab-content">
+            <div class="input-group">
+                <label>โทนสีหลัก (Primary Color)</label>
+                <input type="color" id="theme-color" value="#7a1f1d" style="height: 40px; cursor: pointer;" onchange="changeTheme(this.value)">
+            </div>
+            <p style="font-size: 12px; color: #94a3b8; margin-top: 20px;">
+                💡 ทิปส์: คุณสามารถเปลี่ยนข้อความ เพิ่มหัวข้อ หรือแก้ไขตารางได้โดยตรง เพียงนำเมาส์ไปคลิกที่ข้อความบนหน้ากระดาษ A4 ทางด้านขวาครับ
+            </p>
+        </div>
+    </aside>
+
+    <!-- พื้นที่แสดงผล A4 -->
+    <main class="main-area">
+        <div class="topbar">
+            <span style="font-size: 14px; color: #64748b;">📄 หน้ากระดาษ A4 (คลิกที่ข้อความในกระดาษเพื่อพิมพ์แก้ไขได้เลย)</span>
+            <button class="btn-pdf" id="btn-pdf" onclick="exportPDF()">📥 บันทึก PDF (เพื่อส่งต่อ)</button>
+        </div>
+
+        <div class="a4-wrapper">
+            <div class="a4-paper" id="a4-paper">
+                
+                <!-- หัวกระดาษ -->
+                <div class="doc-header">
+                    <h1 contenteditable="true">คลิกพิมพ์ชื่อหัวข้อรายงาน...</h1>
+                    <p contenteditable="true">[ คลิกพิมพ์ระบุชื่อหน่วยงาน / ปีงบประมาณ ]</p>
+                </div>
+
+                <!-- สรุปสาระสำคัญ -->
+                <div class="doc-summary">
+                    <strong>📌 สรุปสาระสำคัญ (Executive Summary):</strong><br>
+                    <span id="out-summary" contenteditable="true" style="color: #64748b;">
+                        (อัปโหลดไฟล์ Word + ใส่ API Key เพื่อให้ AI สรุปให้อัตโนมัติ หรือ คลิกที่นี่เพื่อพิมพ์ข้อความสรุปด้วยตนเอง...)
+                    </span>
+                </div>
+
+                <!-- กริด 6 ส่วน -->
+                <div class="doc-grid">
+                    
+                    <!-- ส่วนที่ 1 -->
+                    <div class="section-card">
+                        <div class="sec-title"><span class="sec-badge">1</span> <span contenteditable="true">ฐานะการเงินและผลการดำเนินงาน</span></div>
+                        <div class="sec-content">
+                            <div style="margin-bottom: 5px;">
+                                สินทรัพย์: <span id="val-asset" style="color:var(--primary); font-weight:bold;">0.00</span> | 
+                                หนี้สิน: <span id="val-liability">0.00</span> | ทุน: <span id="val-equity">0.00</span> ลบ.<br>
+                                รายได้: <span id="val-income">0.00</span> | จ่าย: <span id="val-expense">0.00</span> ลบ.
+                            </div>
+                            <div class="chart-container"><canvas id="c1"></canvas></div>
+                            <div class="desc-box" contenteditable="true">👉 คลิกพิมพ์คำบรรยาย วิเคราะห์สถานะการเงิน...</div>
+                        </div>
+                    </div>
+
+                    <!-- ส่วนที่ 2 -->
+                    <div class="section-card">
+                        <div class="sec-title"><span class="sec-badge">2</span> <span contenteditable="true">การบริหารจัดการงบประมาณรวม</span></div>
+                        <div class="sec-content">
+                            <div style="text-align: center; font-weight: bold; margin-bottom: 5px;" contenteditable="true">
+                                งบประมาณรวมทั้งสิ้น <span id="val-b-total">0.00</span> ล้านบาท
+                            </div>
+                            <div class="chart-container"><canvas id="c2"></canvas></div>
+                            <div class="desc-box" contenteditable="true">👉 คลิกพิมพ์คำบรรยาย สัดส่วนงบแผ่นดินและงบรายได้...</div>
+                        </div>
+                    </div>
+
+                    <!-- ส่วนที่ 3 -->
+                    <div class="section-card">
+                        <div class="sec-title"><span class="sec-badge">3</span> <span contenteditable="true">ประสิทธิภาพการใช้งบแผ่นดิน</span></div>
+                        <div class="sec-content">
+                            <table class="data-table">
+                                <tr><th>รายการ</th><th>จัดสรร</th><th>ใช้จริง</th><th>%</th></tr>
+                                <tr><td contenteditable="true">งบบุคลากร</td><td contenteditable="true">0.00</td><td contenteditable="true">0.00</td><td contenteditable="true">0%</td></tr>
+                                <tr><td contenteditable="true">งบดำเนินงาน</td><td contenteditable="true">0.00</td><td contenteditable="true">0.00</td><td contenteditable="true">0%</td></tr>
+                                <tr><td contenteditable="true">งบลงทุน</td><td contenteditable="true">0.00</td><td contenteditable="true">0.00</td><td contenteditable="true">0%</td></tr>
+                            </table>
+                            <div class="desc-box" contenteditable="true">👉 คลิกพิมพ์คำบรรยาย การเบิกจ่ายงบแผ่นดิน...</div>
+                        </div>
+                    </div>
+
+                    <!-- ส่วนที่ 4 -->
+                    <div class="section-card">
+                        <div class="sec-title"><span class="sec-badge">4</span> <span contenteditable="true">งบรายได้: ประมาณการ vs รับจริง</span></div>
+                        <div class="sec-content">
+                            <div class="chart-container"><canvas id="c4"></canvas></div>
+                            <div class="desc-box" contenteditable="true">👉 คลิกพิมพ์คำบรรยาย การจัดเก็บรายได้...</div>
+                        </div>
+                    </div>
+
+                    <!-- ส่วนที่ 5 -->
+                    <div class="section-card">
+                        <div class="sec-title"><span class="sec-badge">5</span> <span contenteditable="true">งบรายได้: ประมาณการ vs จ่ายจริง</span></div>
+                        <div class="sec-content">
+                            <table class="data-table">
+                                <tr><th>กลุ่มภารกิจ</th><th>ประมาณการ</th><th>จ่ายจริง</th><th>%</th></tr>
+                                <tr><td contenteditable="true">บริหาร</td><td contenteditable="true">0.00</td><td contenteditable="true">0.00</td><td contenteditable="true">0%</td></tr>
+                                <tr><td contenteditable="true">มนุษยศาสตร์</td><td contenteditable="true">0.00</td><td contenteditable="true">0.00</td><td contenteditable="true">0%</td></tr>
+                                <tr><td contenteditable="true">วิทยาศาสตร์</td><td contenteditable="true">0.00</td><td contenteditable="true">0.00</td><td contenteditable="true">0%</td></tr>
+                            </table>
+                            <div class="desc-box" contenteditable="true">👉 คลิกพิมพ์คำบรรยาย การเบิกจ่ายงบรายได้...</div>
+                        </div>
+                    </div>
+
+                    <!-- ส่วนที่ 6 -->
+                    <div class="section-card">
+                        <div class="sec-title"><span class="sec-badge">6</span> <span contenteditable="true">รายได้สะสมคงเหลือรวม</span></div>
+                        <div class="sec-content">
+                            <div class="chart-container"><canvas id="c6"></canvas></div>
+                            <div class="desc-box" contenteditable="true">👉 คลิกพิมพ์คำบรรยาย สถานะเงินรายได้สะสม...</div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="footer">
+                    <span contenteditable="true">ผู้จัดทำ: .......................................</span>
+                    <span contenteditable="true">ผู้อนุมัติ: .......................................</span>
+                    <span contenteditable="true">วันที่พิมพ์: .......................................</span>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // ระบบจัดการ Tabs ด้านซ้าย
+        function openTab(tabId) {
+            document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById(tabId).classList.add('active');
+        }
+
+        // ระบบเปลี่ยนสีตีม
+        function changeTheme(color) {
+            document.documentElement.style.setProperty('--primary', color);
+        }
+
+        // ตัวแปรเก็บกราฟ
+        let charts = {};
+        Chart.defaults.font.family = "'Sarabun', sans-serif";
+        Chart.defaults.animation = false; // ปิดอนิเมชั่นเพื่อให้กด Save PDF ติดทันที
+
+        function initCharts() {
+            const commonOpt = { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } };
+            
+            charts.c1 = new Chart(document.getElementById('c1'), { 
+                type: 'bar', 
+                data: { labels: ['สินทรัพย์', 'หนี้สิน', 'ทุน', 'รายได้', 'จ่าย'], datasets: [{ data: [0,0,0,0,0], backgroundColor: ['#0284c7','#dc2626','#16a34a','#d97706','#64748b'] }] }, 
+                options: commonOpt 
+            });
+            charts.c2 = new Chart(document.getElementById('c2'), { 
+                type: 'doughnut', 
+                data: { labels: ['งบแผ่นดิน', 'งบรายได้'], datasets: [{ data: [0,0], backgroundColor: ['var(--primary)','#d97706'] }] }, 
+                options: commonOpt 
+            });
+            charts.c4 = new Chart(document.getElementById('c4'), { 
+                type: 'bar', 
+                data: { labels: ['บริหาร', 'มนุษย์', 'วิทย์', 'สุขภาพ'], datasets: [{ label: 'ประมาณการ', data: [0,0,0,0], backgroundColor: '#cbd5e1'}, { label: 'รับจริง', data: [0,0,0,0], backgroundColor: '#0284c7'}] }, 
+                options: { ...commonOpt, plugins: { legend: { display: true, position: 'top', labels: { boxWidth: 8, font: { size: 8 } } } } } 
+            });
+            charts.c6 = new Chart(document.getElementById('c6'), { 
+                type: 'bar', 
+                data: { labels: ['บริหาร', 'มนุษย์', 'วิทย์', 'สุขภาพ', 'กองทุน'], datasets: [{ data: [0,0,0,0,0], backgroundColor: '#d97706' }] }, 
+                options: commonOpt 
+            });
+        }
+
+        // อัปเดตข้อมูลตัวเลขลงกระดาษ A4
+        function updateData() {
+            const asset = parseFloat(document.getElementById('in-asset').value) || 0;
+            const liability = parseFloat(document.getElementById('in-liability').value) || 0;
+            const income = parseFloat(document.getElementById('in-income').value) || 0;
+            const expense = parseFloat(document.getElementById('in-expense').value) || 0;
+            const equity = asset - liability;
+
+            document.getElementById('val-asset').innerText = asset.toLocaleString('th-TH');
+            document.getElementById('val-liability').innerText = liability.toLocaleString('th-TH');
+            document.getElementById('val-equity').innerText = equity.toLocaleString('th-TH');
+            document.getElementById('val-income').innerText = income.toLocaleString('th-TH');
+            document.getElementById('val-expense').innerText = expense.toLocaleString('th-TH');
+
+            charts.c1.data.datasets[0].data = [asset, liability, equity, income, expense];
+            charts.c1.update();
+        }
+
+        // อ่านไฟล์ Excel
+        function handleExcelImport(e) {
+            const file = e.target.files[0];
+            if(!file) return;
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const data = new Uint8Array(event.target.result);
+                const workbook = XLSX.read(data, {type: 'array'});
+                const sheet = workbook.Sheets[workbook.SheetNames[0]];
+
+                document.getElementById('in-asset').value = sheet['B2'] ? sheet['B2'].v : 0;
+                document.getElementById('in-liability').value = sheet['B3'] ? sheet['B3'].v : 0;
+                document.getElementById('in-income').value = sheet['B4'] ? sheet['B4'].v : 0;
+                document.getElementById('in-expense').value = sheet['B5'] ? sheet['B5'].v : 0;
+                
+                updateData();
+                alert('นำเข้าข้อมูล Excel สำเร็จ!');
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        // อ่านไฟล์ Word + วิ่งเข้า Gemini AI
+        function handleWordImport(e) {
+            const file = e.target.files[0];
+            if(!file) return;
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                mammoth.extractRawText({arrayBuffer: event.target.result}).then(async (result) => {
+                    const text = result.value;
+                    const apiKey = document.getElementById('gemini-key').value.trim();
+                    const summaryBox = document.getElementById('out-summary');
+                    
+                    if(apiKey) {
+                        summaryBox.innerText = "🤖 Gemini กำลังวิเคราะห์ข้อมูลและสรุปสาระสำคัญ...";
+                        summaryBox.style.color = "#0ea5e9";
+                        try {
+                            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+                                method: 'POST',
+                                headers: {'Content-Type': 'application/json'},
+                                body: JSON.stringify({ contents: [{ parts: [{ text: `โปรดสรุปข้อความต่อไปนี้เป็นสรุปสาระสำคัญสำหรับผู้บริหาร ภายใน 3 บรรทัด เขียนภาษาไทยให้ทางการ:\n\n${text}` }] }] })
+                            });
+                            const data = await response.json();
+                            if(data.candidates) {
+                                summaryBox.innerText = data.candidates[0].content.parts[0].text;
+                                summaryBox.style.color = "#334155";
+                            } else { throw new Error(); }
+                        } catch (err) {
+                            alert("เชื่อมต่อ AI ไม่สำเร็จ กรุณาเช็ค API Key");
+                            summaryBox.innerText = "คลิกเพื่อพิมพ์ข้อความสรุปด้วยตนเอง...";
+                            summaryBox.style.color = "#64748b";
+                        }
+                    } else {
+                        // แบบไม่ใส่ API (สกัดคำหยาบๆ แทน)
+                        let clean = text.replace(/บันทึกข้อความ/g, '').replace(/ส่วนราชการ.*?\n/g, '').replace(/ที่\s*อว.*?\n/g, '').replace(/เรื่อง.*?\n/g, '').replace(/เรียน.*?\n/g, '');
+                        summaryBox.innerText = clean.substring(0, 250) + '... (ใส่ API Key เพื่อให้ AI สรุปให้เนียนยิ่งขึ้น หรือคลิกพิมพ์เองได้เลยครับ)';
+                        summaryBox.style.color = "#334155";
+                    }
+                }).catch(err => alert('กรุณาใช้ไฟล์ .docx ครับ'));
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        // ระบบบันทึก PDF
+        function exportPDF() {
+            const element = document.getElementById('a4-paper');
+            const btn = document.getElementById('btn-pdf');
+            btn.innerText = "⏳ กำลังสร้าง PDF...";
+            
+            html2pdf().set({
+                margin: 0,
+                filename: 'Executive_Report_Summary.pdf',
+                image: { type: 'jpeg', quality: 1 },
+                html2canvas: { scale: 2, useCORS: true },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            }).from(element).save().then(() => {
+                btn.innerText = "📥 บันทึก PDF (เพื่อส่งต่อ)";
+            });
+        }
+
+        window.onload = initCharts;
+    </script>
+</body>
+</html>
