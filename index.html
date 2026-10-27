@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบสร้างและปรับแต่งรายงานสรุปทางการเงิน A4 (Financial Report Generator)</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Google Fonts: Sarabun & Prompt -->
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sarabun: ['Sarabun', 'sans-serif'],
+                        prompt: ['Prompt', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            font-family: 'Sarabun', sans-serif;
+            background-color: #0f172a;
+            color: #1e293b;
+        }
+
+        /* Standard Exact A4 Sheet Layout */
+        .a4-sheet {
+            width: 210mm;
+            height: 297mm;
+            min-height: 297mm;
+            padding: 8mm 10mm;
+            margin: 0 auto;
+            background: #ffffff;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+            box-sizing: border-box;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        /* ContentEditable Outline & Focus Visuals */
+        [contenteditable="true"]:hover {
+            outline: 1px dashed #3b82f6;
+            background-color: rgba(239, 246, 255, 0.7);
+            border-radius: 2px;
+            cursor: text;
+        }
+        [contenteditable="true"]:focus {
+            outline: 1.5px solid #2563eb;
+            background-color: #ffffff;
+            border-radius: 2px;
+        }
+
+        /* Scrollbars */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1e293b;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 3px;
+        }
+
+        /* Strict Print Rules for A4 PDF Output */
+        @media print {
+            @page {
+                size: A4 portrait;
+                margin: 0;
+            }
+            html, body {
+                background: #ffffff !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                height: 100% !important;
+                overflow: visible !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+            .no-print {
+                display: none !important;
+            }
+            .print-container {
+                padding: 0 !important;
+                margin: 0 !important;
+                width: 100% !important;
+                height: 100% !important;
+                display: block !important;
+            }
+            .a4-sheet {
+                width: 210mm !important;
+                height: 297mm !important;
+                box-shadow: none !important;
+                padding: 6mm 8mm !important;
+                margin: 0 auto !important;
+                page-break-after: always;
+                page-break-inside: avoid;
+            }
+            [contenteditable="true"]:hover, [contenteditable="true"]:focus {
+                outline: none !important;
+                background-color: transparent !important;
+            }
+        }
+
+        .report-table th, .report-table td {
+            padding: 2px 4px;
+            font-size: 9.5px;
+            line-height: 1.2;
+        }
+    </style>
+</head>
+<body class="h-screen flex flex-col overflow-hidden text-slate-800">
+
+    <!-- TOP CONTROL TOOLBAR (NO PRINT) -->
+    <header class="no-print bg-slate-900 border-b border-slate-800 text-white px-5 py-2.5 flex flex-wrap justify-between items-center shadow-lg z-20 shrink-0">
+        <div class="flex items-center space-x-3">
+            <div class="bg-gradient-to-tr from-sky-500 to-indigo-600 text-white font-bold p-2.5 rounded-xl shadow-md text-lg leading-none">
+                <i class="fa-solid fa-file-invoice-dollar"></i>
+            </div>
+            <div>
+                <h1 class="font-prompt text-base font-semibold leading-snug flex items-center gap-2">
+                    ระบบสร้างรายงานสรุปทางการเงิน A4
+                    <span class="text-[10px] font-normal bg-sky-500/20 text-sky-300 border border-sky-500/30 px-2 py-0.5 rounded-full">NU Model Format</span>
+                </h1>
+                <p class="text-xs text-slate-400">แก้ไขข้อมูล บรรยายเชิงลึก ตัวเลข กราฟ และพิมพ์เป็น PDF หน้ากระดาษ A4 ได้ทันที</p>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex items-center gap-2 mt-2 sm:mt-0">
+            <label class="cursor-pointer bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs px-3 py-2 rounded-lg transition border border-slate-700 flex items-center gap-1.5">
+                <i class="fa-solid fa-file-import"></i> นำเข้า JSON
+                <input type="file" id="jsonInput" accept=".json" class="hidden" onchange="importJSONConfig(event)">
+            </label>
+            
+            <button onclick="exportJSONConfig()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs px-3 py-2 rounded-lg transition border border-slate-700 flex items-center gap-1.5">
+                <i class="fa-solid fa-file-export"></i> บันทึก JSON
+            </button>
+
+            <button onclick="resetToDefaults()" class="bg-rose-950/60 hover:bg-rose-900 text-rose-300 border border-rose-800/60 text-xs px-3 py-2 rounded-lg transition flex items-center gap-1.5">
+                <i class="fa-solid fa-rotate-left"></i> คืนค่าเริ่มต้น
+            </button>
+
+            <button onclick="triggerPrint()" class="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-prompt font-semibold text-xs px-4 py-2 rounded-lg shadow-lg transition flex items-center gap-2">
+                <i class="fa-solid fa-print text-sm"></i> พิมพ์ / บันทึก PDF (A4)
+            </button>
+        </div>
+    </header>
+
+    <!-- MAIN WORKSPACE -->
+    <div class="flex-1 flex overflow-hidden">
+
+        <!-- LEFT SIDEBAR: EDITORS & CONTROLS (NO PRINT) -->
+        <aside class="no-print w-96 bg-slate-900 border-r border-slate-800 text-slate-200 flex flex-col shrink-0 custom-scrollbar overflow-y-auto z-10">
+            
+            <div class="sticky top-0 bg-slate-900/95 backdrop-blur-md p-3 border-b border-slate-800 flex space-x-1 z-20">
+                <button onclick="switchTab('dataTab')" id="btn-dataTab" class="tab-btn flex-1 text-xs py-1.5 font-medium rounded-md bg-sky-600 text-white transition flex items-center justify-center gap-1">
+                    <i class="fa-solid fa-database"></i> ข้อมูล & ตัวเลข
+                </button>
+                <button onclick="switchTab('styleTab')" id="btn-styleTab" class="tab-btn flex-1 text-xs py-1.5 font-medium rounded-md bg-slate-800 text-slate-400 hover:text-white transition flex items-center justify-center gap-1">
+                    <i class="fa-solid fa-palette"></i> ธีม & การจัดหน้า
+                </button>
+            </div>
+
+            <!-- TAB 1: DATA & NUMBERS CONTROL -->
+            <div id="dataTab" class="tab-content p-4 space-y-4">
+                
+                <!-- General Info -->
+                <div class="bg-slate-800/60 border border-slate-700/60 p-3 rounded-xl space-y-2">
+                    <h3 class="font-prompt text-xs font-semibold text-sky-400 uppercase tracking-wider">ส่วนหัวรายงาน</h3>
+                    <div>
+                        <label class="block text-[11px] text-slate-400 mb-1">ชื่อมหาวิทยาลัย / หน่วยงาน</label>
+                        <input type="text" id="in_orgName" value="มหาวิทยาลัยนเรศวร" oninput="syncInputsToDoc()" class="w-full bg-slate-900 border border-slate-700 text-xs rounded p-1.5 text-slate-100">
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-[11px] text-slate-400 mb-1">ปีงบประมาณ</label>
+                            <input type="text" id="in_budgetYear" value="2569" oninput="syncInputsToDoc()" class="w-full bg-slate-900 border border-slate-700 text-xs rounded p-1.5 text-slate-100">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] text-slate-400 mb-1">รอบระยะเวลา</label>
+                            <input type="text" id="in_period" value="สำหรับ 6 เดือน สิ้นสุดวันที่ 31 มีนาคม 2569" oninput="syncInputsToDoc()" class="w-full bg-slate-900 border border-slate-700 text-xs rounded p-1.5 text-slate-100">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 1 Numeric Controls -->
+                <div class="bg-slate-800/60 border border-slate-700/60 p-3 rounded-xl space-y-2">
+                    <h3 class="font-prompt text-xs font-semibold text-sky-400 uppercase tracking-wider">1. ฐานะการเงินและผลการดำเนินงาน (ล้านบาท)</h3>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-[10px] text-slate-400">สินทรัพย์รวม</label>
+                            <input type="number" step="0.001" id="in_s1_assets" value="12438.100" oninput="updateChartsAndData()" class="w-full bg-slate-900 border border-slate-700 text-xs rounded p-1.5">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-slate-400">หนี้สินรวม</label>
+                            <input type="number" step="0.001" id="in_s1_liabilities" value="1036.216" oninput="updateChartsAndData()" class="w-full bg-slate-900 border border-slate-700 text-xs rounded p-1.5">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-slate-400">ส่วนของทุน</label>
+                            <input type="number" step="0.001" id="in_s1_equity" value="11401.884" oninput="updateChartsAndData()" class="w-full bg-slate-900 border border-slate-700 text-xs rounded p-1.5">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-slate-400">รายได้รวม</label>
+                            <input type="number" step="0.001" id="in_s1_revenue" value="3946.034" oninput="updateChartsAndData()" class="w-full bg-slate-900 border border-slate-700 text-xs rounded p-1.5">
+                        </div>
+                        <div class="col-span-2">
+                            <label class="block text-[10px] text-slate-400">ค่าใช้จ่ายรวม</label>
+                            <input type="number" step="0.001" id="in_s1_expense" value="3097.069" oninput="updateChartsAndData()" class="w-full bg-slate-900 border border-slate-700 text-xs rounded p-1.5">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 2 Budget Allocation Controls -->
+                <div class="bg-slate-800/60 border border-slate-700/60 p-3 rounded-xl space-y-2">
+                    <h3 class="font-prompt text-xs font-semibold text-sky-400 uppercase tracking-wider">2. จัดสรรงบประมาณ (ล้านบาท)</h3>
+                    <div>
+                        <label class="block text-[10px] text-slate-400">งบประมาณรวม</label>
+                        <input type="number" step="0.001" id="in_s2_total" value="7277.393" oninput="updateChartsAndData()" class="w-full bg-slate-900 border border-slate-700 text-xs rounded p-1.5">
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-[10px] text-slate-400">งบแผ่นดินรวม</label>
+                            <input type="number" step="0.001" id="in_s2_gov" value="2584.343" oninput="updateChartsAndData()" class="w-full bg-slate-900 border border-slate-700 text-xs rounded p-1.5">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-slate-400">งบรายได้รวม</label>
+                            <input type="number" step="0.001" id="in_s2_income" value="4693.050" oninput="updateChartsAndData()" class="w-full bg-slate-900 border border-slate-700 text-xs rounded p-1.5">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 6 Accumulated Income -->
+                <div class="bg-slate-800/60 border border-slate-700/60 p-3 rounded-xl space-y-2">
+                    <h3 class="font-prompt text-xs font-semibold text-sky-400 uppercase tracking-wider">6. ยอดรายได้สะสมคงเหลือ</h3>
+                    <div>
+                        <label class="block text-[10px] text-slate-400">รายได้สะสมรวม (ล้านบาท)</label>
+                        <input type="number" step="0.001" id="in_s6_total" value="3116.262" oninput="updateChartsAndData()" class="w-full bg-slate-900 border border-slate-700 text-xs rounded p-1.5">
+                    </div>
+                </div>
+
+                <div class="p-3 bg-slate-800/40 border border-slate-700/50 rounded-xl text-xs text-slate-300 space-y-1">
+                    <div class="font-semibold text-amber-400 flex items-center gap-1">
+                        <i class="fa-solid fa-lightbulb"></i> ข้อแนะนำการแก้ไขข้อความ:
+                    </div>
+                    <p class="text-[11px] leading-relaxed">
+                        คุณสามารถ **คลิกไปที่ตัวหนังสือหรือตัวเลขบนหน้าเอกสาร A4** ทางขวามือได้โดยตรง เพื่อแก้ไขคำบรรยาย รายละเอียดวิเคราะห์ หรือหมายเหตุให้ตรงตามต้องการ
+                    </p>
+                </div>
+
+            </div>
+
+            <!-- TAB 2: STYLES, THEMES & SECTION TOGGLES -->
+            <div id="styleTab" class="tab-content p-4 space-y-4 hidden">
+                
+                <!-- Color Theme Options -->
+                <div class="bg-slate-800/60 border border-slate-700/60 p-3 rounded-xl space-y-3">
+                    <h3 class="font-prompt text-xs font-semibold text-sky-400 uppercase tracking-wider flex items-center gap-1.5">
+                        <i class="fa-solid fa-paint-roller"></i> ธีมสีหัวข้อ & แบนเนอร์
+                    </h3>
+                    
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-[11px] text-slate-400 mb-1">สีแบนเนอร์หลัก</label>
+                            <input type="color" id="primaryColorPicker" value="#475569" onchange="updateColors()" class="w-full h-8 rounded bg-slate-700 border border-slate-600 cursor-pointer p-0.5">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] text-slate-400 mb-1">สีไฮไลต์ / กราฟ</label>
+                            <input type="color" id="accentColorPicker" value="#0284c7" onchange="updateColors()" class="w-full h-8 rounded bg-slate-700 border border-slate-600 cursor-pointer p-0.5">
+                        </div>
+                    </div>
+
+                    <!-- Presets -->
+                    <div>
+                        <label class="block text-[11px] text-slate-400 mb-1.5">ชุดสีสำเร็จรูป</label>
+                        <div class="flex gap-1.5">
+                            <button onclick="applyColorPreset('#475569', '#0284c7')" class="flex-1 h-6 rounded bg-slate-600 border border-slate-400 hover:scale-105 transition" title="NU Classic Gray"></button>
+                            <button onclick="applyColorPreset('#1e3a8a', '#2563eb')" class="flex-1 h-6 rounded bg-blue-900 border border-blue-500 hover:scale-105 transition" title="Royal Blue"></button>
+                            <button onclick="applyColorPreset('#064e3b', '#10b981')" class="flex-1 h-6 rounded bg-emerald-900 border border-emerald-500 hover:scale-105 transition" title="Emerald Green"></button>
+                            <button onclick="applyColorPreset('#7c2d12', '#ea580c')" class="flex-1 h-6 rounded bg-orange-900 border border-orange-500 hover:scale-105 transition" title="Warm Amber"></button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Font Zoom & Spacing Adjuster -->
+                <div class="bg-slate-800/60 border border-slate-700/60 p-3 rounded-xl space-y-3">
+                    <h3 class="font-prompt text-xs font-semibold text-sky-400 uppercase tracking-wider flex items-center gap-1.5">
+                        <i class="fa-solid fa-text-height"></i> ปรับระยะห่าง & ขนาดตัวอักษร A4
+                    </h3>
+                    
+                    <div>
+                        <div class="flex justify-between items-center mb-1">
+                            <label class="text-[11px] text-slate-400">ขนาดตัวอักษรรวม (Zoom Scale)</label>
+                            <span id="fontSizeVal" class="text-xs text-sky-400 font-mono">100%</span>
+                        </div>
+                        <input type="range" id="fontScaleSlider" min="80" max="115" value="100" step="1" oninput="updateFontScale()" class="w-full accent-sky-500">
+                    </div>
+                </div>
+
+                <!-- Signature Setup -->
+                <div class="bg-slate-800/60 border border-slate-700/60 p-3 rounded-xl space-y-3">
+                    <h3 class="font-prompt text-xs font-semibold text-sky-400 uppercase tracking-wider flex items-center gap-1.5">
+                        <i class="fa-solid fa-signature"></i> ช่องลงนามอนุมัติ
+                    </h3>
+
+                    <label class="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
+                        <input type="checkbox" id="toggleSignature" onchange="toggleSignatureArea()" class="rounded accent-sky-500">
+                        <span>แสดงท้ายเอกสาร (ช่องลงนาม)</span>
+                    </label>
+                </div>
+
+            </div>
+
+        </aside>
+
+        <!-- RIGHT PREVIEW AREA: DYNAMIC A4 PRINT SHEET -->
+        <main class="flex-1 bg-slate-950 p-4 sm:p-6 overflow-y-auto custom-scrollbar flex justify-center print-container">
+            
+            <!-- A4 SHEET -->
+            <div id="a4Page" class="a4-sheet font-sarabun text-slate-900">
+                
+                <!-- REPORT HEADER BANNER -->
+                <div>
+                    <div id="headerBanner" class="bg-slate-600 text-white p-2 rounded-t-sm transition-colors duration-300">
+                        <div class="text-center">
+                            <h1 contenteditable="true" id="doc_title" class="text-sm sm:text-base font-bold font-prompt leading-tight outline-none">รายงานสถานะทางการเงินและผลการดำเนินงาน</h1>
+                            <h2 contenteditable="true" id="doc_org" class="text-xs font-semibold mt-0.5 outline-none">มหาวิทยาลัยนเรศวร ประจำปีงบประมาณ 2569</h2>
+                            <p contenteditable="true" id="doc_period" class="text-[10px] font-light text-slate-200 outline-none">สำหรับ 6 เดือน สิ้นสุดวันที่ 31 มีนาคม 2569</p>
+                        </div>
+                    </div>
+
+                    <!-- 6 SECTIONS GRID (LAYOUT MATCHING EXACT IMAGE) -->
+                    <div id="sectionsGrid" class="grid grid-cols-12 gap-1.5 mt-1.5">
+
+                        <!-- SECTION 1: FINANCIAL POSITION & PERFORMANCE -->
+                        <div id="sec1_container" class="col-span-12 border border-slate-300 rounded p-1.5 bg-slate-50/50">
+                            <div class="flex items-center justify-between border-b border-slate-200 pb-0.5 mb-1">
+                                <div class="flex items-center gap-1">
+                                    <span class="sec-badge bg-slate-700 text-white rounded-full w-4 h-4 flex items-center justify-center text-[9px] font-bold">1</span>
+                                    <h3 contenteditable="true" class="font-bold text-xs text-slate-800 font-prompt outline-none">ฐานะการเงินและผลการดำเนินงาน</h3>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-12 gap-2 items-center">
+                                <!-- Chart Left -->
+                                <div class="col-span-5">
+                                    <div class="h-28 w-full">
+                                        <canvas id="chart1"></canvas>
+                                    </div>
+                                </div>
+                                <!-- Text Analysis Right -->
+                                <div class="col-span-7 text-[10px] space-y-1 text-slate-800 leading-tight">
+                                    <p contenteditable="true" class="outline-none">
+                                        • <strong>สินทรัพย์รวม</strong> <span id="doc_s1_assets" class="text-sky-700 font-bold">12,438.100</span> ล้านบาท มีสินทรัพย์หมุนเวียนเพิ่มขึ้นร้อยละ 5.64 จากปีก่อน แสดงถึงสภาพคล่องทางการเงินที่สูงขึ้น โดยหลักมาจากเงินลงทุนระยะสั้นที่บริหารจัดการในรูปแบบเงินฝากประจำ
+                                    </p>
+                                    <p contenteditable="true" class="outline-none">
+                                        • <strong>หนี้สินรวม</strong> <span id="doc_s1_liabilities" class="text-amber-700 font-bold">1,036.216</span> ล้านบาท และ <strong>ส่วนของทุน</strong> <span id="doc_s1_equity" class="text-emerald-700 font-bold">11,401.884</span> ล้านบาท มหาวิทยาลัยมีหนี้สินในระดับต่ำเมื่อเทียบกับส่วนของทุนทั้งหมด โดยหนี้สินลดลงร้อยละ (84.40) จากปีก่อน เกิดจากการเปลี่ยนประเภทหนี้สินบุคลากรความรับผิดทางแพ่ง และลูกหนี้ความรับผิดตามสัญญา จากระยะสั้นเป็นระยะยาว
+                                    </p>
+                                    <p contenteditable="true" class="outline-none">
+                                        • <strong>รายได้รวม</strong> <span id="doc_s1_revenue" class="text-indigo-700 font-bold">3,946.034</span> ล้านบาท มีรายได้ลดลงร้อยละ (0.35) จากปีก่อนเล็กน้อย ซึ่งรายได้หลักมาจากรายการขายสินค้าและบริการ และรายได้อุดหนุนงบประมาณ
+                                    </p>
+                                    <p contenteditable="true" class="outline-none">
+                                        • <strong>ค่าใช้จ่ายรวม</strong> <span id="doc_s1_expense" class="text-rose-700 font-bold">3,097.069</span> ล้านบาท มีค่าใช้จ่ายเพิ่มขึ้นร้อยละ 0.66 จากปีก่อน โครงสร้างค่าใช้จ่ายหลักคือ ค่าใช้จ่ายบุคลากร มีสัดส่วนเป็นร้อยละ 38.02 ของรายได้รวม
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- SECTION 2: BUDGET MANAGEMENT -->
+                        <div id="sec2_container" class="col-span-6 border border-slate-300 rounded p-1.5 bg-slate-50/50 flex flex-col justify-between">
+                            <div>
+                                <div class="flex items-center gap-1 border-b border-slate-200 pb-0.5 mb-1">
+                                    <span class="sec-badge bg-slate-700 text-white rounded-full w-4 h-4 flex items-center justify-center text-[9px] font-bold">2</span>
+                                    <h3 contenteditable="true" class="font-bold text-xs text-slate-800 font-prompt outline-none">การบริหารจัดการงบประมาณ</h3>
+                                </div>
+                                <div class="text-[11px] font-semibold text-slate-800 mb-0.5">
+                                    <span id="doc_s2_total" class="font-bold text-sky-800">7,277.393</span> ล้านบาท
+                                </div>
+                            </div>
+
+                            <div class="flex items-center gap-1.5">
+                                <div class="w-2/5">
+                                    <div class="h-20 w-full">
+                                        <canvas id="chart2"></canvas>
+                                    </div>
+                                </div>
+                                <div class="w-3/5 text-[9.5px] space-y-0.5 text-slate-700 leading-tight">
+                                    <div contenteditable="true" class="font-semibold text-slate-900 outline-none">แผ่นดิน:</div>
+                                    <div contenteditable="true" class="pl-1 outline-none">• งบประมาณแผ่นดิน: <span id="doc_s2_gov">2,584.343</span> ล้านบาท</div>
+                                    <div contenteditable="true" class="pl-1 outline-none">• งบกลาง: 16.275 ล้านบาท</div>
+                                    
+                                    <div contenteditable="true" class="font-semibold text-slate-900 pt-0.5 outline-none">รายได้:</div>
+                                    <div contenteditable="true" class="pl-1 outline-none">• งบประมาณรายได้: <span id="doc_s2_income">3,935.682</span> ล้านบาท</div>
+                                    <div contenteditable="true" class="pl-1 outline-none">• เงินรับฝาก: 728.562 ล้านบาท</div>
+                                    <div contenteditable="true" class="pl-1 outline-none">• เงินบริจาคโดยมีวัตถุประสงค์: 3.914 ล้านบาท</div>
+                                    <div contenteditable="true" class="pl-1 outline-none">• เงินกองทุน: 8.617 ล้านบาท</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- SECTION 3: NATIONAL BUDGET EFFICIENCY TABLE -->
+                        <div id="sec3_container" class="col-span-6 border border-slate-300 rounded p-1.5 bg-slate-50/50">
+                            <div class="flex items-center justify-between border-b border-slate-200 pb-0.5 mb-1">
+                                <div class="flex items-center gap-1">
+                                    <span class="sec-badge bg-slate-700 text-white rounded-full w-4 h-4 flex items-center justify-center text-[9px] font-bold">3</span>
+                                    <h3 contenteditable="true" class="font-bold text-xs text-slate-800 font-prompt outline-none">ประสิทธิภาพการใช้งบประมาณ</h3>
+                                </div>
+                                <button onclick="addTableRow('tableSec3')" class="no-print text-[8px] bg-slate-200 hover:bg-slate-300 text-slate-700 px-1 py-0.5 rounded">
+                                    + เพิ่มแถว
+                                </button>
+                            </div>
+                            <div class="text-[9.5px] text-slate-700 font-semibold mb-0.5">
+                                เปรียบเทียบงบประมาณรายจ่ายกับรายจ่ายจริง (งบประมาณแผ่นดิน)
+                            </div>
+                            <div class="overflow-x-auto">
+                                <table id="tableSec3" class="report-table w-full text-left border-collapse border border-slate-300">
+                                    <thead>
+                                        <tr class="bg-slate-200/80 text-slate-800 border-b border-slate-300 font-semibold">
+                                            <th class="p-0.5 border border-slate-300">จำแนกตามงบรายจ่าย</th>
+                                            <th class="p-0.5 text-right border border-slate-300">งบประมาณ</th>
+                                            <th class="p-0.5 text-right border border-slate-300">จ่ายจริง</th>
+                                            <th class="p-0.5 text-right border border-slate-300">เบิกจ่าย* (%)</th>
+                                            <th class="p-0.5 text-right border border-slate-300">เป้าหมาย (%)</th>
+                                            <th class="p-0.5 text-center no-print">ลบ</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-200 text-slate-700">
+                                        <tr class="font-semibold bg-slate-100">
+                                            <td contenteditable="true" class="border border-slate-300">งบประมาณแผ่นดินรวม</td>
+                                            <td contenteditable="true" class="text-right border border-slate-300" oninput="calcTableRow(this)">2,584.34</td>
+                                            <td contenteditable="true" class="text-right border border-slate-300" oninput="calcTableRow(this)">1,438.66</td>
+                                            <td class="text-right text-emerald-700 font-bold border border-slate-300">55.67</td>
+                                            <td contenteditable="true" class="text-right border border-slate-300">55.00</td>
+                                            <td class="text-center no-print"><button onclick="deleteTableRow(this)" class="text-rose-500">×</button></td>
+                                        </tr>
+                                        <tr>
+                                            <td contenteditable="true" class="border border-slate-300">• งบบุคลากร</td>
+                                            <td contenteditable="true" class="text-right border border-slate-300" oninput="calcTableRow(this)">2,294.35</td>
+                                            <td contenteditable="true" class="text-right border border-slate-300" oninput="calcTableRow(this)">1,423.09</td>
+                                            <td class="text-right border border-slate-300">62.03</td>
+                                            <td contenteditable="true" class="text-right border border-slate-300">60.00</td>
+                                            <td class="text-center no-print"><button onclick="deleteTableRow(this)" class="text-rose-500">×</button></td>
+                                        </tr>
+                                        <tr>
+                                            <td contenteditable="true" class="border border-slate-300">• งบดำเนินงาน</td>
+                                            <td contenteditable="true" class="text-right border border-slate-300" oninput="calcTableRow(this)">367.93</td>
+                                            <td contenteditable="true" class="text-right border border-slate-300" oninput="calcTableRow(this)">184.08</td>
+                                            <td class="text-right border border-slate-300">50.03</td>
+                                            <td contenteditable="true" class="text-right border border-slate-300">50.00</td>
+                                            <td class="text-center no-print"><button onclick="deleteTableRow(this)" class="text-rose-500">×</button></td>
+                                        </tr>
+                                        <tr>
+                                            <td contenteditable="true" class="border border-slate-300">• งบดำเนินงานอื่นๆ</td>
+                                            <td contenteditable="true" class="text-right border border-slate-300" oninput="calcTableRow(this)">33.96</td>
+                                            <td contenteditable="true" class="text-right border border-slate-300" oninput="calcTableRow(this)">5.78</td>
+                                            <td class="text-right border border-slate-300">17.03</td>
+                                            <td contenteditable="true" class="text-right border border-slate-300">-</td>
+                                            <td class="text-center no-print"><button onclick="deleteTableRow(this)" class="text-rose-500">×</button></td>
+                                        </tr>
+                                        <tr>
+                                            <td contenteditable="true" class="border border-slate-300">• งบลงทุน</td>
+                                            <td contenteditable="true" class="text-right border border-slate-300" oninput="calcTableRow(this)">1,892.46</td>
+                                            <td contenteditable="true" class="text-right border border-slate-300" oninput="calcTableRow(this)">1,233.22</td>
+                                            <td class="text-right border border-slate-300">65.17</td>
+                                            <td contenteditable="true" class="text-right border border-slate-300">-</td>
+                                            <td class="text-center no-print"><button onclick="deleteTableRow(this)" class="text-rose-500">×</button></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <p contenteditable="true" class="text-[8.5px] text-slate-600 mt-1 italic outline-none leading-tight">
+                                * ประสิทธิภาพการเบิกจ่ายงบประมาณแผ่นดินเป็นไปตามเป้าหมาย โดยภาพรวมรวมเบิกจ่ายได้สูงกว่าเป้าหมายเล็กน้อย
+                            </p>
+                        </div>
+
+                        <!-- SECTION 4: INCOME BUDGET - REVENUE CHART -->
+                        <div id="sec4_container" class="col-span-6 border border-slate-300 rounded p-1.5 bg-slate-50/50">
+                            <div class="flex items-center gap-1 border-b border-slate-200 pb-0.5 mb-1">
+                                <span class="sec-badge bg-slate-700 text-white rounded-full w-4 h-4 flex items-center justify-center text-[9px] font-bold">4</span>
+                                <h3 contenteditable="true" class="font-bold text-xs text-slate-800 font-prompt outline-none">ประสิทธิภาพการใช้งบประมาณ</h3>
+                            </div>
+                            <div class="text-[9.5px] text-slate-700 font-semibold mb-0.5">
+                                เปรียบเทียบประมาณการรายรับกับรายรับจริง (งบประมาณรายได้)
+                            </div>
+                            <div class="h-24 w-full">
+                                <canvas id="chart4"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- SECTION 5: INCOME BUDGET - EXPENSE TABLE -->
+                        <div id="sec5_container" class="col-span-6 border border-slate-300 rounded p-1.5 bg-slate-50/50">
+                            <div class="flex items-center justify-between border-b border-slate-200 pb-0.5 mb-1">
+                                <div class="flex items-center gap-1">
+                                    <span class="sec-badge bg-slate-700 text-white rounded-full w-4 h-4 flex items-center justify-center text-[9px] font-bold">5</span>
+                                    <h3 contenteditable="true" class="font-bold text-xs text-slate-800 font-prompt outline-none">ประสิทธิภาพการใช้งบประมาณ</h3>
+                                </div>
+                                <button onclick="addTableRow('tableSec5')" class="no-print text-[8px] bg-slate-200 hover:bg-slate-300 text-slate-700 px-1 py-0.5 rounded">
+                                    + เพิ่มแถว
+                                </button>
+                            </div>
+                            <div class="text-[9.5px] text-slate-700 font-semibold mb-0.5">
+                                เปรียบเทียบประมาณการรายจ่ายกับรายจ่ายจริง (งบประมาณรายได้)
+                            </div>
+                            <div class="overflow-x-auto">
+                                <table id="tableSec5" class="report-table w-full text-left border-collapse border border-slate-300">
+                                    <thead>
+                                        <tr class="bg-slate-200/80 text-slate-800 border-b border-slate-300 font-semibold">
+                                            <th class="p-0.5 border border-slate-300">งบประมาณรายได้</th>
+                                            <th class="p-0.5 text-right border border-slate-300">ประมาณการรายจ่าย</th>
+                                            <th class="p-0.5 text-right border border-slate-300">รายจ่ายจริง</th>
+                                            <th class="p-0.5 text-right border border-slate-300">เบิกจ่าย* (%)</th>
+                                            <th class="p-0.5 text-center no-print">ลบ</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-200 text-slate-700">
+                                        <tr class="font-semibold bg-slate-100">
+                                            <td contenteditable="true" class="border border-slate-300">งบประมาณรายได้รวม</td>
+                                            <td contenteditable="true" class="text-right border border-slate-300" oninput="calcTableRow(this)">3,935.68</td>
+                                            <td contenteditable="true" class="text-right border border-slate-300" oninput="calcTableRow(this)">1,117.45</td>
+                                            <td class="text-right text-emerald-700 font-bold border border-slate-300">28.39</td>
+                                            <td class="text-center no-print"><button onclick="deleteTableRow(this)" class="text-rose-500">×</button></td>
+                                        </tr>
+                                        <tr>
+                                            <td contenteditable="true" class="border border-slate-300">• งบบุคลากร</td>
+                                            <td contenteditable="true" class="text-right border border-slate-300" oninput="calcTableRow(this)">574.40</td>
+                                            <td contenteditable="true" class="text-right border border-slate-300" oninput="calcTableRow(this)">250.06</td>
+                                            <td class="text-right border border-slate-300">43.53</td>
+                                            <td class="text-center no-print"><button onclick="deleteTableRow(this)" class="text-rose-500">×</button></td>
+                                        </tr>
+                                        <tr>
+                                            <td contenteditable="true" class="border border-slate-300">• งบดำเนินงาน</td>
+                                            <td contenteditable="true" class="text-right border border-slate-300" oninput="calcTableRow(this)">2,287.16</td>
+                                            <td contenteditable="true" class="text-right border border-slate-300" oninput="calcTableRow(this)">670.38</td>
+                                            <td class="text-right border border-slate-300">29.30</td>
+                                            <td class="text-center no-print"><button onclick="deleteTableRow(this)" class="text-rose-500">×</button></td>
+                                        </tr>
+                                        <tr>
+                                            <td contenteditable="true" class="border border-slate-300">• งบลงทุน</td>
+                                            <td contenteditable="true" class="text-right border border-slate-300" oninput="calcTableRow(this)">349.69</td>
+                                            <td contenteditable="true" class="text-right border border-slate-300" oninput="calcTableRow(this)">20.48</td>
+                                            <td class="text-right border border-slate-300">5.86</td>
+                                            <td class="text-center no-print"><button onclick="deleteTableRow(this)" class="text-rose-500">×</button></td>
+                                        </tr>
+                                        <tr>
+                                            <td contenteditable="true" class="border border-slate-300">• งบอุดหนุน</td>
+                                            <td contenteditable="true" class="text-right border border-slate-300" oninput="calcTableRow(this)">724.43</td>
+                                            <td contenteditable="true" class="text-right border border-slate-300" oninput="calcTableRow(this)">162.51</td>
+                                            <td class="text-right border border-slate-300">22.43</td>
+                                            <td class="text-center no-print"><button onclick="deleteTableRow(this)" class="text-rose-500">×</button></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <p contenteditable="true" class="text-[8.5px] text-slate-600 mt-0.5 italic outline-none leading-tight">
+                                * ประสิทธิภาพรวมในการเบิกจ่ายประมาณร้อยละ 28.39 ต่ำกว่าเป้าหมายที่ตั้งไว้
+                            </p>
+                        </div>
+
+                        <!-- SECTION 6: ACCUMULATED INCOME CHART -->
+                        <div id="sec6_container" class="col-span-12 border border-slate-300 rounded p-1.5 bg-slate-50/50">
+                            <div class="flex items-center justify-between border-b border-slate-200 pb-0.5 mb-0.5">
+                                <div class="flex items-center gap-1">
+                                    <span class="sec-badge bg-slate-700 text-white rounded-full w-4 h-4 flex items-center justify-center text-[9px] font-bold">6</span>
+                                    <h3 contenteditable="true" class="font-bold text-xs text-slate-800 font-prompt outline-none">
+                                        รายได้สะสม <span id="doc_s6_total" class="text-amber-800">3,116.262</span> ล้านบาท
+                                    </h3>
+                                </div>
+                            </div>
+                            <div class="h-24 w-full">
+                                <canvas id="chart6"></canvas>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- SIGNATURE SECTION (OPTIONAL) -->
+                <div id="signatureSection" class="hidden my-1 pt-1.5 border-t border-dashed border-slate-300 grid grid-cols-2 gap-4 text-center text-[9.5px]">
+                    <div>
+                        <p class="mb-5">ลงนาม.........................................................</p>
+                        <p contenteditable="true" class="font-semibold outline-none">(นายผู้จัดทำ รายงาน)</p>
+                        <p contenteditable="true" class="text-slate-500 outline-none">ตำแหน่ง นักวิเคราะห์นโยบายและแผน</p>
+                    </div>
+                    <div>
+                        <p class="mb-5">ลงนาม.........................................................</p>
+                        <p contenteditable="true" class="font-semibold outline-none">(นายผู้ตรวจอนุมัติ รายงาน)</p>
+                        <p contenteditable="true" class="text-slate-500 outline-none">ตำแหน่ง ผู้อำนวยการกองตลับบัญชีและงบประมาณ</p>
+                    </div>
+                </div>
+
+                <!-- FOOTER -->
+                <div class="border-t border-slate-300 pt-0.5 flex justify-between items-center text-[8.5px] text-slate-500 font-light">
+                    <div contenteditable="true" class="outline-none">รายงานสถานะทางการเงินและผลการดำเนินงาน | มหาวิทยาลัยนเรศวร</div>
+                    <div>หน้า 1 จาก 1</div>
+                </div>
+
+            </div>
+
+        </main>
+    </div>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        let chart1, chart2, chart4, chart6;
+
+        // Initialize Charts
+        function initCharts() {
+            // Chart 1: Financial Position & Performance (Bar Chart)
+            const ctx1 = document.getElementById('chart1').getContext('2d');
+            chart1 = new Chart(ctx1, {
+                type: 'bar',
+                data: {
+                    labels: ['สินทรัพย์', 'หนี้สิน', 'ส่วนของทุน', 'รายได้', 'ค่าใช้จ่าย'],
+                    datasets: [
+                        {
+                            label: '6M / 31 มี.ค. 2569',
+                            data: [12438.100, 1036.216, 11401.884, 3946.034, 3097.069],
+                            backgroundColor: '#0284c7'
+                        },
+                        {
+                            label: '6M / 31 มี.ค. 2568',
+                            data: [11773.000, 6642.000, 5131.000, 3960.000, 3076.000],
+                            backgroundColor: '#94a3b8'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { 
+                        legend: { labels: { boxWidth: 6, font: { size: 7 } }, position: 'top' } 
+                    },
+                    scales: { 
+                        y: { beginAtZero: true, ticks: { font: { size: 7 } } }, 
+                        x: { ticks: { font: { size: 7.5 } } } 
+                    }
+                }
+            });
+
+            // Chart 2: Budget Allocation Doughnut Chart
+            const ctx2 = document.getElementById('chart2').getContext('2d');
+            chart2 = new Chart(ctx2, {
+                type: 'doughnut',
+                data: {
+                    labels: ['แผ่นดิน', 'รายได้'],
+                    datasets: [{
+                        data: [2584.343, 4693.050],
+                        backgroundColor: ['#475569', '#d97706'],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    cutout: '55%'
+                }
+            });
+
+            // Chart 4: Revenue Budget Grouped Bar Chart
+            const ctx4 = document.getElementById('chart4').getContext('2d');
+            chart4 = new Chart(ctx4, {
+                type: 'bar',
+                data: {
+                    labels: ['ภาพรวม', 'กลุ่มสนับสนุนบริหาร', 'กลุ่มมนุษยศาสตร์', 'กลุ่มวิทยาศาสตร์', 'กลุ่มวิทยาศาสตร์สุขภาพ'],
+                    datasets: [
+                        {
+                            label: 'ประมาณการรายรับ',
+                            data: [3935.68, 1085.40, 725.90, 832.10, 2437.90],
+                            backgroundColor: '#d97706'
+                        },
+                        {
+                            label: 'รายรับจริง',
+                            data: [1117.45, 123.81, 300.95, 208.58, 829.04],
+                            backgroundColor: '#0284c7'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { labels: { boxWidth: 6, font: { size: 7 } }, position: 'top' } },
+                    scales: { 
+                        y: { ticks: { font: { size: 7 } } }, 
+                        x: { ticks: { font: { size: 6.5 } } } 
+                    }
+                }
+            });
+
+            // Chart 6: Accumulated Income Bar Chart
+            const ctx6 = document.getElementById('chart6').getContext('2d');
+            chart6 = new Chart(ctx6, {
+                type: 'bar',
+                data: {
+                    labels: ['กลุ่มสนับสนุนบริหาร', 'กลุ่มมนุษยศาสตร์', 'กลุ่มวิทยาศาสตร์', 'กลุ่มวิทยาศาสตร์สุขภาพ', 'กองทุนดอกผลสะสม', 'กองทุนบำรุงรักษา'],
+                    datasets: [{
+                        label: 'รายได้สะสม (ล้านบาท)',
+                        data: [689.41, 722.06, 258.77, 373.60, 894.77, 178.63],
+                        backgroundColor: '#d97706',
+                        borderRadius: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { 
+                        y: { ticks: { font: { size: 7 } } }, 
+                        x: { ticks: { font: { size: 6.5 } } } 
+                    }
+                }
+            });
+        }
+
+        // Tab Switching
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('bg-sky-600', 'text-white');
+                btn.classList.add('bg-slate-800', 'text-slate-400');
+            });
+
+            document.getElementById(tabId).classList.remove('hidden');
+            const activeBtn = document.getElementById('btn-' + tabId);
+            activeBtn.classList.remove('bg-slate-800', 'text-slate-400');
+            activeBtn.classList.add('bg-sky-600', 'text-white');
+        }
+
+        // Sync Sidebar Inputs to Document Text
+        function syncInputsToDoc() {
+            document.getElementById('doc_org').innerText = document.getElementById('in_orgName').value + ' ประจำปีงบประมาณ ' + document.getElementById('in_budgetYear').value;
+            document.getElementById('doc_period').innerText = document.getElementById('in_period').value;
+        }
+
+        // Update Charts and Document Numbers
+        function updateChartsAndData() {
+            // Section 1
+            const asset = parseFloat(document.getElementById('in_s1_assets').value) || 0;
+            const liab = parseFloat(document.getElementById('in_s1_liabilities').value) || 0;
+            const eq = parseFloat(document.getElementById('in_s1_equity').value) || 0;
+            const rev = parseFloat(document.getElementById('in_s1_revenue').value) || 0;
+            const exp = parseFloat(document.getElementById('in_s1_expense').value) || 0;
+
+            document.getElementById('doc_s1_assets').innerText = asset.toLocaleString('th-TH', {minimumFractionDigits: 3});
+            document.getElementById('doc_s1_liabilities').innerText = liab.toLocaleString('th-TH', {minimumFractionDigits: 3});
+            document.getElementById('doc_s1_equity').innerText = eq.toLocaleString('th-TH', {minimumFractionDigits: 3});
+            document.getElementById('doc_s1_revenue').innerText = rev.toLocaleString('th-TH', {minimumFractionDigits: 3});
+            document.getElementById('doc_s1_expense').innerText = exp.toLocaleString('th-TH', {minimumFractionDigits: 3});
+
+            chart1.data.datasets[0].data = [asset, liab, eq, rev, exp];
+            chart1.update();
+
+            // Section 2
+            const s2Total = parseFloat(document.getElementById('in_s2_total').value) || 0;
+            const s2Gov = parseFloat(document.getElementById('in_s2_gov').value) || 0;
+            const s2Inc = parseFloat(document.getElementById('in_s2_income').value) || 0;
+
+            document.getElementById('doc_s2_total').innerText = s2Total.toLocaleString('th-TH', {minimumFractionDigits: 3});
+            document.getElementById('doc_s2_gov').innerText = s2Gov.toLocaleString('th-TH', {minimumFractionDigits: 3});
+            document.getElementById('doc_s2_income').innerText = s2Inc.toLocaleString('th-TH', {minimumFractionDigits: 3});
+
+            chart2.data.datasets[0].data = [s2Gov, s2Inc];
+            chart2.update();
+
+            // Section 6
+            const s6Total = parseFloat(document.getElementById('in_s6_total').value) || 0;
+            document.getElementById('doc_s6_total').innerText = s6Total.toLocaleString('th-TH', {minimumFractionDigits: 3});
+        }
+
+        // Color Customization
+        function updateColors() {
+            const primaryColor = document.getElementById('primaryColorPicker').value;
+            const accentColor = document.getElementById('accentColorPicker').value;
+
+            document.getElementById('headerBanner').style.backgroundColor = primaryColor;
+            
+            document.querySelectorAll('.sec-badge').forEach(el => {
+                el.style.backgroundColor = primaryColor;
+            });
+
+            chart1.data.datasets[0].backgroundColor = accentColor;
+            chart1.update();
+
+            chart4.data.datasets[1].backgroundColor = accentColor;
+            chart4.update();
+        }
+
+        function applyColorPreset(primary, accent) {
+            document.getElementById('primaryColorPicker').value = primary;
+            document.getElementById('accentColorPicker').value = accent;
+            updateColors();
+        }
+
+        // Font Zoom/Scale Adjuster
+        function updateFontScale() {
+            const scale = document.getElementById('fontScaleSlider').value;
+            document.getElementById('fontSizeVal').innerText = scale + '%';
+            document.getElementById('a4Page').style.fontSize = (scale / 100) + 'rem';
+        }
+
+        // Toggle Signature Area
+        function toggleSignatureArea() {
+            const isChecked = document.getElementById('toggleSignature').checked;
+            const sigSec = document.getElementById('signatureSection');
+            if (isChecked) {
+                sigSec.classList.remove('hidden');
+            } else {
+                sigSec.classList.add('hidden');
+            }
+        }
+
+        // Dynamic Table Operations & Automated Percentage Calculation
+        function calcTableRow(element) {
+            const row = element.closest('tr');
+            const cells = row.querySelectorAll('td');
+            if (cells.length >= 4) {
+                const bg = parseFloat(cells[1].innerText.replace(/,/g, '')) || 0;
+                const act = parseFloat(cells[2].innerText.replace(/,/g, '')) || 0;
+                if (bg > 0) {
+                    const pct = ((act / bg) * 100).toFixed(2);
+                    cells[3].innerText = pct;
+                } else {
+                    cells[3].innerText = '0.00';
+                }
+            }
+        }
+
+        function addTableRow(tableId) {
+            const tbody = document.getElementById(tableId).querySelector('tbody');
+            const newRow = document.createElement('tr');
+            newRow.innerHTML = `
+                <td contenteditable="true" class="border border-slate-300">• รายการเพิ่มใหม่</td>
+                <td contenteditable="true" class="text-right border border-slate-300" oninput="calcTableRow(this)">100.00</td>
+                <td contenteditable="true" class="text-right border border-slate-300" oninput="calcTableRow(this)">50.00</td>
+                <td class="text-right border border-slate-300">50.00</td>
+                ${tableId === 'tableSec3' ? '<td contenteditable="true" class="text-right border border-slate-300">50.00</td>' : ''}
+                <td class="text-center no-print"><button onclick="deleteTableRow(this)" class="text-rose-500">×</button></td>
+            `;
+            tbody.appendChild(newRow);
+        }
+
+        function deleteTableRow(button) {
+            const row = button.closest('tr');
+            row.remove();
+        }
+
+        // Save & Load Configurations via JSON
+        function exportJSONConfig() {
+            const config = {
+                orgName: document.getElementById('in_orgName').value,
+                budgetYear: document.getElementById('in_budgetYear').value,
+                period: document.getElementById('in_period').value,
+                s1_assets: document.getElementById('in_s1_assets').value,
+                s1_liabilities: document.getElementById('in_s1_liabilities').value,
+                s1_equity: document.getElementById('in_s1_equity').value,
+                s1_revenue: document.getElementById('in_s1_revenue').value,
+                s1_expense: document.getElementById('in_s1_expense').value,
+                s2_total: document.getElementById('in_s2_total').value,
+                s2_gov: document.getElementById('in_s2_gov').value,
+                s2_income: document.getElementById('in_s2_income').value,
+                s6_total: document.getElementById('in_s6_total').value,
+                primaryColor: document.getElementById('primaryColorPicker').value,
+                accentColor: document.getElementById('accentColorPicker').value,
+                fontScale: document.getElementById('fontScaleSlider').value,
+                showSignature: document.getElementById('toggleSignature').checked,
+                docTitle: document.getElementById('doc_title').innerText
+            };
+
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(config, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `financial_report_${config.budgetYear}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        }
+
+        function importJSONConfig(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const cfg = JSON.parse(e.target.result);
+                    if (cfg.orgName) document.getElementById('in_orgName').value = cfg.orgName;
+                    if (cfg.budgetYear) document.getElementById('in_budgetYear').value = cfg.budgetYear;
+                    if (cfg.period) document.getElementById('in_period').value = cfg.period;
+                    if (cfg.s1_assets) document.getElementById('in_s1_assets').value = cfg.s1_assets;
+                    if (cfg.s1_liabilities) document.getElementById('in_s1_liabilities').value = cfg.s1_liabilities;
+                    if (cfg.s1_equity) document.getElementById('in_s1_equity').value = cfg.s1_equity;
+                    if (cfg.s1_revenue) document.getElementById('in_s1_revenue').value = cfg.s1_revenue;
+                    if (cfg.s1_expense) document.getElementById('in_s1_expense').value = cfg.s1_expense;
+                    if (cfg.s2_total) document.getElementById('in_s2_total').value = cfg.s2_total;
+                    if (cfg.s2_gov) document.getElementById('in_s2_gov').value = cfg.s2_gov;
+                    if (cfg.s2_income) document.getElementById('in_s2_income').value = cfg.s2_income;
+                    if (cfg.s6_total) document.getElementById('in_s6_total').value = cfg.s6_total;
+                    if (cfg.primaryColor) document.getElementById('primaryColorPicker').value = cfg.primaryColor;
+                    if (cfg.accentColor) document.getElementById('accentColorPicker').value = cfg.accentColor;
+                    if (cfg.fontScale) document.getElementById('fontScaleSlider').value = cfg.fontScale;
+                    if (cfg.docTitle) document.getElementById('doc_title').innerText = cfg.docTitle;
+
+                    syncInputsToDoc();
+                    updateChartsAndData();
+                    updateColors();
+                    updateFontScale();
+
+                    if (cfg.showSignature !== undefined) {
+                        document.getElementById('toggleSignature').checked = cfg.showSignature;
+                        toggleSignatureArea();
+                    }
+
+                    alert('นำเข้าข้อมูลสำเร็จแล้ว!');
+                } catch (err) {
+                    alert('ไฟล์ JSON ไม่ถูกต้อง');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        // Reset
+        function resetToDefaults() {
+            if (confirm('คุณต้องการรีเซ็ตข้อความและตัวเลขทั้งหมดกลับเป็นค่าเริ่มต้นใช่หรือไม่?')) {
+                location.reload();
+            }
+        }
+
+        // Print Trigger
+        function triggerPrint() {
+            window.print();
+        }
+
+        // On Load Initialize
+        window.onload = function() {
+            initCharts();
+            syncInputsToDoc();
+            updateChartsAndData();
+            updateColors();
+        };
+    </script>
+</body>
+</html>
+      
