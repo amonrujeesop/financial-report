@@ -1,0 +1,33 @@
+<!-- 1. ดึง Library อ่านไฟล์ Word -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+
+<!-- 2. ปุ่มอัปโหลดไฟล์ Word บนแถบ Sidebar -->
+<div class="form-group">
+  <label>📄 นำเข้าข้อความจากไฟล์ Word (.docx)</label>
+  <input type="file" id="word-file" accept=".docx" class="form-control" onchange="importWord(event)">
+</div>
+
+<!-- 3. สคริปต์อ่านข้อความไปวางบน A4 -->
+<script>
+function importWord(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(event) {
+    const arrayBuffer = event.target.result;
+    mammoth.extractRawText({arrayBuffer: arrayBuffer})
+      .then(function(result) {
+        const text = result.value;
+        // นำข้อความจาก Word ไปใส่ในช่อง Executive Summary บนหน้า A4
+        document.getElementById('out-summary').innerText = text.substring(0, 300) + '...';
+        document.getElementById('in-summary').value = text.substring(0, 300) + '...';
+        alert('นำเข้าเนื้อหาจากไฟล์ Word เรียบร้อยแล้ว!');
+      })
+      .catch(function(err) {
+        alert('เกิดข้อผิดพลาดในการอ่านไฟล์ Word (แนะนำให้เซฟเป็นไฟล์ .docx)');
+      });
+  };
+  reader.readAsArrayBuffer(file);
+}
+</script>
