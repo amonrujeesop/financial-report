@@ -71,7 +71,7 @@
                 background: white;
             }
             /* Hide UI elements */
-            #sidebar, #topbar {
+            #sidebar, #topbar, #toast-message {
                 display: none !important;
             }
             /* Reset container styles for printing */
@@ -103,14 +103,14 @@
 </head>
 <body class="h-screen overflow-hidden flex" id="main-container">
 
+    <!-- Custom Message Box (Toast Notification) -->
+    <div id="toast-message" class="fixed top-20 right-6 bg-gray-800 text-white px-6 py-3 rounded-lg shadow-xl transform transition-all duration-300 translate-x-full opacity-0 z-[100] flex items-center gap-3 pointer-events-none">
+        <i class="fa-solid fa-circle-check text-green-400 text-lg"></i>
+        <span id="toast-text" class="text-sm font-medium">ข้อความ</span>
+    </div>
+
     <!-- Left Sidebar -->
-    <aside id="sidebar" class="w-80 bg-[#1a1a2e] text-white flex flex-col h-full z-10 shadow-2xl relative">
-        <!-- Header -->
-        <div class="p-5 border-b border-gray-700">
-            <h1 class="text-xl font-bold text-blue-400 flex items-center gap-2">
-                <i class="fa-solid fa-chart-column"></i> Executive Fin-Studio
-            </h1>
-            <p class="text-xs text-gray-400 mt-1">ระบบสร้างรายงานผู้บริหารอัจฉริยะ (AI Powered)</p>
+    <aside id="sidebar" class="w-80 bg-[#1a1a2e] text-white flex flex-col h-full z-20 shadow-2xl relative">
         </div>
 
         <!-- Tabs -->
@@ -200,22 +200,21 @@
     <main class="flex-1 flex flex-col relative bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-gray-100">
         
         <!-- Top Bar Actions -->
-        <header id="topbar" class="h-16 px-6 flex justify-between items-center bg-white/80 backdrop-blur border-b border-gray-200 z-10 shadow-sm sticky top-0">
+        <header id="topbar" class="h-16 px-6 flex justify-between items-center bg-white/80 backdrop-blur border-b border-gray-200 z-50 shadow-sm sticky top-0">
             <div class="text-sm text-gray-500 flex items-center gap-2">
                 <i class="fa-regular fa-file-lines"></i> หน้ากระดาษ A4 (คลิกที่ข้อความในกระดาษเพื่อพิมพ์แก้ไขได้เลย)
             </div>
-            <div class="flex gap-2">
-                <button class="px-4 py-2 bg-gray-700 text-white rounded text-sm hover:bg-gray-800 transition flex items-center gap-2">
+            <div class="flex gap-2 relative z-50">
+                <button onclick="showMessage('บันทึกแบบร่างรายงานเรียบร้อยแล้ว')" class="px-4 py-2 bg-gray-700 text-white rounded text-sm hover:bg-gray-800 transition flex items-center gap-2 cursor-pointer shadow-sm">
                     <i class="fa-solid fa-floppy-disk"></i> บันทึกร่าง
                 </button>
-                <button class="px-4 py-2 bg-gray-700 text-white rounded text-sm hover:bg-gray-800 transition flex items-center gap-2">
+                <button onclick="window.print()" class="px-4 py-2 bg-gray-700 text-white rounded text-sm hover:bg-gray-800 transition flex items-center gap-2 cursor-pointer shadow-sm">
                     <i class="fa-solid fa-file-pdf"></i> บันทึก PDF
                 </button>
-                <!-- Print Button triggers window.print() -->
-                <button onclick="window.print()" class="px-4 py-2 bg-gray-700 text-white rounded text-sm hover:bg-gray-800 transition flex items-center gap-2">
+                <button onclick="window.print()" class="px-4 py-2 bg-gray-700 text-white rounded text-sm hover:bg-gray-800 transition flex items-center gap-2 cursor-pointer shadow-sm">
                     <i class="fa-solid fa-print"></i> พิมพ์
                 </button>
-                <button class="px-4 py-2 bg-red-600 text-white rounded text-sm hover:bg-red-700 transition flex items-center gap-2 ml-2">
+                <button onclick="showMessage('กำลังปิดหน้าต่างการทำงาน...')" class="px-4 py-2 bg-red-600 text-white rounded text-sm hover:bg-red-700 transition flex items-center gap-2 ml-2 cursor-pointer shadow-sm">
                     <i class="fa-solid fa-xmark"></i> ปิด
                 </button>
             </div>
@@ -385,6 +384,22 @@
 
     <!-- Chart Setup Scripts -->
     <script>
+        // Custom Message Box function (replaces standard alert)
+        function showMessage(msg) {
+            const toast = document.getElementById('toast-message');
+            const toastText = document.getElementById('toast-text');
+            
+            toastText.innerText = msg;
+            
+            // Show toast
+            toast.classList.remove('translate-x-full', 'opacity-0');
+            
+            // Hide toast after 3 seconds
+            setTimeout(() => {
+                toast.classList.add('translate-x-full', 'opacity-0');
+            }, 3000);
+        }
+
         // Global Chart Defaults for consistent styling
         Chart.defaults.font.family = "'Prompt', sans-serif";
         Chart.defaults.color = '#64748b';
