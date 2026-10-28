@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Executive Fin-Studio</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Google Fonts: Prompt for Thai language -->
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Prompt', sans-serif;
+            background-color: #f3f4f6;
+        }
+
+        /* Custom Scrollbar for the dark sidebar */
+        .dark-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .dark-scrollbar::-webkit-scrollbar-track {
+            background: #1a1a2e; 
+        }
+        .dark-scrollbar::-webkit-scrollbar-thumb {
+            background: #3f3f5a; 
+            border-radius: 10px;
+        }
+
+        /* A4 Paper Styling */
+        .a4-paper {
+            width: 210mm;
+            min-height: 297mm;
+            background: white;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            margin: 0 auto;
+            padding: 15mm;
+            position: relative;
+        }
+
+        /* Editable content styling */
+        [contenteditable="true"] {
+            outline: none;
+            transition: all 0.2s;
+            border-bottom: 1px dashed transparent;
+        }
+        [contenteditable="true"]:hover {
+            border-bottom: 1px dashed #cbd5e1;
+            background-color: rgba(255,255,255,0.1);
+        }
+        .paper-content [contenteditable="true"]:hover {
+            background-color: #f8fafc;
+            border-bottom: 1px dashed #94a3b8;
+        }
+
+        /* Print Media Query */
+        @media print {
+            @page {
+                size: A4;
+                margin: 0;
+            }
+            body {
+                background: white;
+            }
+            /* Hide UI elements */
+            #sidebar, #topbar {
+                display: none !important;
+            }
+            /* Reset container styles for printing */
+            #main-container {
+                display: block !important;
+                width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+            #scrollable-area {
+                overflow: visible !important;
+                display: block !important;
+                padding: 0 !important;
+            }
+            .a4-paper {
+                box-shadow: none !important;
+                margin: 0 !important;
+                padding: 10mm !important; /* adjust for actual printer margins */
+                width: 100% !important;
+                height: auto !important;
+                page-break-after: always;
+            }
+            /* Ensure charts render correctly in print */
+            canvas {
+                max-width: 100% !important;
+            }
+        }
+    </style>
+</head>
+<body class="h-screen overflow-hidden flex" id="main-container">
+
+    <!-- Left Sidebar -->
+    <aside id="sidebar" class="w-80 bg-[#1a1a2e] text-white flex flex-col h-full z-10 shadow-2xl relative">
+        <!-- Header -->
+        <div class="p-5 border-b border-gray-700">
+            <h1 class="text-xl font-bold text-blue-400 flex items-center gap-2">
+                <i class="fa-solid fa-chart-column"></i> Executive Fin-Studio
+            </h1>
+            <p class="text-xs text-gray-400 mt-1">ระบบสร้างรายงานผู้บริหารอัจฉริยะ (AI Powered)</p>
+        </div>
+
+        <!-- Tabs -->
+        <div class="flex text-sm font-medium text-center border-b border-gray-700">
+            <div class="w-1/2 py-3 border-b-2 border-blue-500 text-blue-400 cursor-pointer bg-[#23233a]">
+                ข้อมูล (Data)
+            </div>
+            <div class="w-1/2 py-3 text-gray-400 cursor-pointer hover:bg-[#2a2a40] transition">
+                ตกแต่ง (Design)
+            </div>
+        </div>
+
+        <!-- Scrollable Inputs -->
+        <div class="flex-1 overflow-y-auto p-5 dark-scrollbar flex flex-col gap-5">
+            
+            <!-- Gemini AI Key -->
+            <div class="bg-[#23233a] p-4 rounded-xl border border-cyan-500/50 shadow-[0_0_10px_rgba(6,182,212,0.2)]">
+                <label class="text-xs text-cyan-400 font-semibold mb-2 flex items-center gap-2">
+                    <i class="fa-solid fa-key text-yellow-500"></i> ตั้งค่า Gemini AI (วิเคราะห์ข้อความ Word)
+                </label>
+                <div class="relative">
+                    <input type="text" placeholder="วาง API Key ที่นี่ (ถ้ามี)..." class="w-full bg-[#1a1a2e] border border-gray-600 rounded p-2 text-sm text-white focus:border-cyan-400 outline-none pr-8">
+                    <i class="fa-solid fa-brain text-purple-400 absolute right-3 top-2.5 text-lg"></i>
+                </div>
+            </div>
+
+            <!-- Import Buttons -->
+            <button class="w-full flex items-center justify-center gap-3 bg-[#23233a] hover:bg-[#2a2a40] border border-gray-600 p-3 rounded-lg transition text-sm">
+                <i class="fa-solid fa-file-excel text-green-500 text-xl"></i>
+                <div class="text-left">
+                    <div class="font-semibold text-blue-300">นำเข้าไฟล์ Excel (.xlsx)</div>
+                    <div class="text-[10px] text-gray-400">ดึงตัวเลขและตารางเข้ากระดาษอัตโนมัติ</div>
+                </div>
+            </button>
+            <button class="w-full flex items-center justify-center gap-3 bg-[#23233a] hover:bg-[#2a2a40] border border-gray-600 p-3 rounded-lg transition text-sm">
+                <i class="fa-solid fa-file-word text-blue-500 text-xl"></i>
+                <div class="text-left">
+                    <div class="font-semibold text-blue-300">นำเข้าไฟล์ Word (.docx)</div>
+                    <div class="text-[10px] text-gray-400">ให้ AI ช่วยอ่านและสรุปเป็นข้อความให้ทันที</div>
+                </div>
+            </button>
+
+            <hr class="border-gray-700">
+
+            <!-- Numeric Inputs -->
+            <div class="flex flex-col gap-4">
+                <div>
+                    <label class="text-xs text-gray-300 mb-1 block">สินทรัพย์รวม (ล้านบาท)</label>
+                    <div class="relative">
+                        <input type="number" value="25.5" class="w-full bg-[#1a1a2e] border border-gray-600 rounded p-2 text-white focus:border-cyan-400 focus:shadow-[0_0_8px_rgba(6,182,212,0.5)] outline-none transition">
+                        <span class="absolute right-3 top-2 text-xs text-gray-500 text-right leading-tight">Million<br>Baht</span>
+                    </div>
+                </div>
+                <div>
+                    <label class="text-xs text-gray-300 mb-1 block">หนี้สินรวม (ล้านบาท)</label>
+                    <div class="relative">
+                        <input type="number" value="4.2" class="w-full bg-[#1a1a2e] border border-gray-600 rounded p-2 text-white focus:border-cyan-400 focus:shadow-[0_0_8px_rgba(6,182,212,0.5)] outline-none transition">
+                        <span class="absolute right-3 top-2 text-xs text-gray-500 text-right leading-tight">Million<br>Baht</span>
+                    </div>
+                </div>
+                <div>
+                    <label class="text-xs text-gray-300 mb-1 block">รายได้รวม (ล้านบาท)</label>
+                    <div class="relative">
+                        <input type="number" value="18.0" class="w-full bg-[#1a1a2e] border border-gray-600 rounded p-2 text-white focus:border-cyan-400 focus:shadow-[0_0_8px_rgba(6,182,212,0.5)] outline-none transition">
+                        <span class="absolute right-3 top-2 text-xs text-gray-500 text-right leading-tight">Million<br>Baht</span>
+                    </div>
+                </div>
+                <div>
+                    <label class="text-xs text-gray-300 mb-1 block">ค่าใช้จ่ายรวม (ล้านบาท)</label>
+                    <div class="relative">
+                        <input type="number" value="7.5" class="w-full bg-[#1a1a2e] border border-gray-600 rounded p-2 text-white focus:border-cyan-400 focus:shadow-[0_0_8px_rgba(6,182,212,0.5)] outline-none transition">
+                        <span class="absolute right-3 top-2 text-xs text-gray-500 text-right leading-tight">Million<br>Baht</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Action -->
+        <div class="p-5 border-t border-gray-700 mt-auto">
+            <button class="w-full bg-transparent border-2 border-cyan-500 text-cyan-400 font-bold py-2 rounded-lg hover:bg-cyan-500 hover:text-white transition shadow-[0_0_10px_rgba(6,182,212,0.3)]">
+                ปรับใช้กับรายงาน
+            </button>
+        </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 flex flex-col relative bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-gray-100">
+        
+        <!-- Top Bar Actions -->
+        <header id="topbar" class="h-16 px-6 flex justify-between items-center bg-white/80 backdrop-blur border-b border-gray-200 z-10 shadow-sm sticky top-0">
+            <div class="text-sm text-gray-500 flex items-center gap-2">
+                <i class="fa-regular fa-file-lines"></i> หน้ากระดาษ A4 (คลิกที่ข้อความในกระดาษเพื่อพิมพ์แก้ไขได้เลย)
+            </div>
+            <div class="flex gap-2">
+                <button class="px-4 py-2 bg-gray-700 text-white rounded text-sm hover:bg-gray-800 transition flex items-center gap-2">
+                    <i class="fa-solid fa-floppy-disk"></i> บันทึกร่าง
+                </button>
+                <button class="px-4 py-2 bg-gray-700 text-white rounded text-sm hover:bg-gray-800 transition flex items-center gap-2">
+                    <i class="fa-solid fa-file-pdf"></i> บันทึก PDF
+                </button>
+                <!-- Print Button triggers window.print() -->
+                <button onclick="window.print()" class="px-4 py-2 bg-gray-700 text-white rounded text-sm hover:bg-gray-800 transition flex items-center gap-2">
+                    <i class="fa-solid fa-print"></i> พิมพ์
+                </button>
+                <button class="px-4 py-2 bg-red-600 text-white rounded text-sm hover:bg-red-700 transition flex items-center gap-2 ml-2">
+                    <i class="fa-solid fa-xmark"></i> ปิด
+                </button>
+            </div>
+        </header>
+
+        <!-- Scrollable Paper Container -->
+        <div id="scrollable-area" class="flex-1 overflow-y-auto p-8 flex justify-center">
+            
+            <!-- A4 Paper -->
+            <div class="a4-paper paper-content">
+                
+                <!-- Paper Header -->
+                <div class="bg-[#8b0000] text-white rounded-xl p-6 relative flex flex-col justify-center items-center text-center shadow-md border-b-4 border-[#5a0000] mb-6">
+                    <h1 class="text-3xl font-bold mb-2 flex items-center gap-3">
+                        <span contenteditable="true">Executive Fin-Studio</span> 
+                        <i class="fa-solid fa-pen text-sm text-gray-300 cursor-pointer opacity-70 hover:opacity-100"></i>
+                    </h1>
+                    <p class="text-sm text-gray-200">
+                        <span contenteditable="true">[ คลิกพิมพ์ระบุชื่อหน่วยงาน / ปีงบประมาณ ]</span>
+                    </p>
+                    
+                    <!-- AI Badge -->
+                    <div class="absolute right-6 top-1/2 -translate-y-1/2 border border-cyan-400 bg-black/30 rounded-lg p-2 flex flex-col items-center shadow-[0_0_10px_rgba(6,182,212,0.5)]">
+                        <i class="fa-solid fa-brain text-cyan-400 text-2xl"></i>
+                        <span class="text-[10px] font-bold text-cyan-400 mt-1">AI Powered</span>
+                    </div>
+                </div>
+
+                <!-- Executive Summary -->
+                <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6 relative">
+                    <div class="text-[#8b0000] font-bold text-sm mb-2 flex items-center gap-2">
+                        <i class="fa-solid fa-thumbtack text-red-600"></i> สรุปสาระสำคัญ (Executive Summary):
+                    </div>
+                    <div contenteditable="true" class="text-sm text-gray-700 min-h-[60px] leading-relaxed">
+                        (อัปโหลดไฟล์ Word + ใส่ API Key เพื่อให้ AI สรุปให้อัตโนมัติ หรือ คลิกที่นี่เพื่อพิมพ์ข้อความสรุปด้วยตนเอง...)
+                    </div>
+                </div>
+
+                <!-- 2x2 Grid -->
+                <div class="grid grid-cols-2 gap-6">
+                    
+                    <!-- Section 1 -->
+                    <div class="border border-gray-200 rounded-lg p-4 bg-white relative">
+                        <div class="flex items-center gap-2 mb-3 border-b pb-2">
+                            <span class="w-6 h-6 rounded-full bg-[#8b0000] text-white flex items-center justify-center text-xs font-bold">1</span>
+                            <h2 class="font-bold text-gray-800 text-sm">ฐานะการเงินและผลการดำเนินงาน</h2>
+                        </div>
+                        <button class="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-xs flex items-center gap-1 bg-gray-100 px-2 py-1 rounded">
+                            <i class="fa-solid fa-gear"></i> แก้ไขกราฟ
+                        </button>
+                        <div class="text-xs text-gray-600 mb-2">
+                            สินทรัพย์: 25.5 | หนี้สิน: 4.2 | ทุน: 21.3 ลบ.<br>
+                            รายได้: 18.0 | จ่าย: 7.5 ลบ.
+                        </div>
+                        <div class="relative h-40 w-full mb-3">
+                            <canvas id="chart1"></canvas>
+                        </div>
+                        <div class="bg-gray-50 border border-gray-200 rounded p-2 text-xs text-gray-600 flex items-start gap-2">
+                            <i class="fa-solid fa-pen text-gray-400 mt-0.5"></i>
+                            <div contenteditable="true" class="flex-1 min-h-[40px]">คลิกพิมพ์คำบรรยาย วิเคราะห์สถานะการเงิน...</div>
+                            <i class="fa-regular fa-pen-to-square text-gray-400"></i>
+                        </div>
+                    </div>
+
+                    <!-- Section 2 -->
+                    <div class="border border-gray-200 rounded-lg p-4 bg-white relative">
+                        <div class="flex items-center gap-2 mb-3 border-b pb-2">
+                            <span class="w-6 h-6 rounded-full bg-[#8b0000] text-white flex items-center justify-center text-xs font-bold">2</span>
+                            <h2 class="font-bold text-gray-800 text-sm">การบริหารจัดการงบประมาณรวม</h2>
+                        </div>
+                        <button class="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-xs flex items-center gap-1 bg-gray-100 px-2 py-1 rounded">
+                            <i class="fa-solid fa-gear"></i> แก้ไขกราฟ
+                        </button>
+                        <div class="text-xs text-center text-gray-600 font-semibold mb-2">
+                            งบประมาณรวมทั้งสิ้น 50.00 ล้านบาท
+                        </div>
+                        <div class="relative h-40 w-full mb-3">
+                            <canvas id="chart2"></canvas>
+                        </div>
+                        <div class="bg-gray-50 border border-gray-200 rounded p-2 text-xs text-gray-600 flex items-start gap-2">
+                            <i class="fa-solid fa-pen text-gray-400 mt-0.5"></i>
+                            <div contenteditable="true" class="flex-1 min-h-[40px]">คลิกพิมพ์คำบรรยาย สัดส่วนงบแผ่นดินและงบรายได้...</div>
+                            <i class="fa-regular fa-pen-to-square text-gray-400"></i>
+                        </div>
+                    </div>
+
+                    <!-- Section 3 -->
+                    <div class="border border-gray-200 rounded-lg p-4 bg-white relative">
+                        <div class="flex items-center gap-2 mb-3 border-b pb-2">
+                            <span class="w-6 h-6 rounded-full bg-[#8b0000] text-white flex items-center justify-center text-xs font-bold">3</span>
+                            <h2 class="font-bold text-gray-800 text-sm">ประสิทธิภาพการใช้งบแผ่นดิน</h2>
+                        </div>
+                        <button class="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-xs flex items-center gap-1 bg-gray-100 px-2 py-1 rounded">
+                            <i class="fa-solid fa-gear"></i> แก้ไขตาราง
+                        </button>
+                        
+                        <div class="w-full mb-3">
+                            <table class="w-full text-xs text-left border-collapse">
+                                <thead>
+                                    <tr class="bg-gray-100 text-gray-700">
+                                        <th class="p-2 border-b">รายการ</th>
+                                        <th class="p-2 border-b text-right">จัดสรร</th>
+                                        <th class="p-2 border-b text-right">ใช้จริง</th>
+                                        <th class="p-2 border-b text-right">%</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td class="p-2 border-b text-gray-600">งบบุคลากร</td>
+                                        <td class="p-2 border-b text-right" contenteditable="true">12.00</td>
+                                        <td class="p-2 border-b text-right" contenteditable="true">11.50</td>
+                                        <td class="p-2 border-b text-right">95.8%</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="p-2 border-b text-gray-600">งบดำเนินงาน</td>
+                                        <td class="p-2 border-b text-right" contenteditable="true">8.00</td>
+                                        <td class="p-2 border-b text-right" contenteditable="true">6.20</td>
+                                        <td class="p-2 border-b text-right">77.5%</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="p-2 border-b text-gray-600">งบลงทุน</td>
+                                        <td class="p-2 border-b text-right" contenteditable="true">15.00</td>
+                                        <td class="p-2 border-b text-right" contenteditable="true">14.80</td>
+                                        <td class="p-2 border-b text-right">98.6%</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="bg-gray-50 border border-gray-200 rounded p-2 text-xs text-gray-600 flex items-start gap-2">
+                            <i class="fa-solid fa-pen text-gray-400 mt-0.5"></i>
+                            <div contenteditable="true" class="flex-1 min-h-[40px]">คลิกพิมพ์คำบรรยาย การเบิกจ่ายงบแผ่นดิน...</div>
+                            <i class="fa-regular fa-pen-to-square text-gray-400"></i>
+                        </div>
+                    </div>
+
+                    <!-- Section 4 -->
+                    <div class="border border-gray-200 rounded-lg p-4 bg-white relative">
+                        <div class="flex items-center gap-2 mb-3 border-b pb-2">
+                            <span class="w-6 h-6 rounded-full bg-[#8b0000] text-white flex items-center justify-center text-xs font-bold">4</span>
+                            <h2 class="font-bold text-gray-800 text-sm">งบรายได้: ประมาณการ vs รับจริง</h2>
+                        </div>
+                        <button class="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-xs flex items-center gap-1 bg-gray-100 px-2 py-1 rounded">
+                            <i class="fa-solid fa-gear"></i> แก้ไขกราฟ
+                        </button>
+                        
+                        <div class="relative h-40 w-full mb-3">
+                            <canvas id="chart4"></canvas>
+                        </div>
+
+                        <div class="bg-gray-50 border border-gray-200 rounded p-2 text-xs text-gray-600 flex items-start gap-2">
+                            <i class="fa-solid fa-pen text-gray-400 mt-0.5"></i>
+                            <div contenteditable="true" class="flex-1 min-h-[40px]">คลิกพิมพ์คำบรรยาย การจัดเก็บรายได้...</div>
+                            <i class="fa-regular fa-pen-to-square text-gray-400"></i>
+                        </div>
+                    </div>
+
+                </div>
+                
+                <!-- Page Number (Footer) -->
+                <div class="absolute bottom-4 right-8 text-xs text-gray-400">
+                    Page 1
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Chart Setup Scripts -->
+    <script>
+        // Global Chart Defaults for consistent styling
+        Chart.defaults.font.family = "'Prompt', sans-serif";
+        Chart.defaults.color = '#64748b';
+        Chart.defaults.scale.grid.color = '#f1f5f9';
+
+        document.addEventListener("DOMContentLoaded", function() {
+            // Chart 1: Financial Status
+            const ctx1 = document.getElementById('chart1').getContext('2d');
+            new Chart(ctx1, {
+                type: 'bar',
+                data: {
+                    labels: ['สินทรัพย์', 'หนี้สิน', 'ทุน', 'รายได้', 'จ่าย'],
+                    datasets: [{
+                        label: 'ล้านบาท',
+                        data: [25.5, 4.2, 21.3, 18.0, 7.5],
+                        backgroundColor: [
+                            'rgba(13, 148, 136, 0.7)', // Teal
+                            'rgba(56, 189, 248, 0.7)', // Light Blue
+                            'rgba(148, 163, 184, 0.7)', // Slate
+                            'rgba(180, 83, 9, 0.7)',   // Amber
+                            'rgba(239, 68, 68, 0.7)'    // Red
+                        ],
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { beginAtZero: true }
+                    }
+                }
+            });
+
+            // Chart 2: Budget Management
+            const ctx2 = document.getElementById('chart2').getContext('2d');
+            new Chart(ctx2, {
+                type: 'bar',
+                data: {
+                    labels: ['งบแผ่นดิน', 'งบรายได้'],
+                    datasets: [{
+                        label: 'ล้านบาท',
+                        data: [35.0, 15.0],
+                        backgroundColor: 'rgba(96, 165, 250, 0.8)', // Blue
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { beginAtZero: true, max: 40 }
+                    }
+                }
+            });
+
+            // Chart 4: Estimated vs Actual Revenue
+            const ctx4 = document.getElementById('chart4').getContext('2d');
+            new Chart(ctx4, {
+                type: 'bar',
+                data: {
+                    labels: ['บริหาร', 'มนุษย์', 'วิทย์', 'สุขภาพ'],
+                    datasets: [
+                        {
+                            label: 'ประมาณการ',
+                            data: [4.0, 6.0, 8.0, 12.0],
+                            backgroundColor: 'rgba(203, 213, 225, 0.8)', // Light Gray
+                            borderRadius: 4
+                        },
+                        {
+                            label: 'รับจริง',
+                            data: [4.2, 5.8, 8.5, 13.0],
+                            backgroundColor: 'rgba(217, 119, 6, 0.8)', // Gold/Amber
+                            borderRadius: 4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { 
+                        legend: { 
+                            display: true, 
+                            position: 'top',
+                            labels: { boxWidth: 12, usePointStyle: true, pointStyle: 'rectRounded' }
+                        } 
+                    },
+                    scales: {
+                        y: { beginAtZero: true }
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>
